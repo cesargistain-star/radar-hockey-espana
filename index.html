@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Radar · Observación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#C8102E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Radar">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script src="config.js"></script>
+<style>
+/* Fuentes corporativas Hockey España. Si se retiran los archivos, cae a Archivo y la app funciona igual. */
+@font-face{font-family:"Redstick";src:url(fonts/redstick.otf);font-display:swap}
+@font-face{font-family:"CfgBlack";src:url(fonts/configblack.ttf);font-display:swap}
+@font-face{font-family:"CfgText";src:url(fonts/configtext.ttf);font-display:swap}
+/* Hockey España · Radar de Desarrollo Individual.
+   Layout: una columna de 720px, lista de ítems plegables; el nivel se elige leyendo su descriptor.
+   Los cuatro niveles usan una rampa de un solo tono (claro -> oscuro): son momentos del desarrollo, no un semáforo. */
+:root{
+  --rojo:#E4002B; --rojo-hover:#B80023;
+  --papel:#F6F2F1; --carta:#FFFFFF; --carta-2:#EFEAE9;
+  --tinta:#1A1948; --tinta-suave:#6F6668; --linea:#E6E0E0;
+  --n1-bg:#EDE9E9; --n1-tx:#6F6668; --n2-bg:#C9C6D8; --n2-tx:#2B2974;
+  --n3-bg:#2B2974; --n3-tx:#FFFFFF; --n4-bg:#1A1948; --n4-tx:#FFFFFF;
+  --sin-bg:#FFFFFF; --sin-tx:#8E8688;
+  --ok:#1F6B4F; --aviso:#8A5A12;
+  --font-display:'Redstick','CfgBlack','Archivo','Helvetica Neue',Arial,sans-serif;
+  --font-body:'CfgText','Archivo','Helvetica Neue',Arial,sans-serif;
+  --font-fuerte:'CfgBlack','Archivo','Helvetica Neue',Arial,sans-serif;
+  --r:10px; --sombra:0 1px 2px rgba(23,24,27,.06),0 8px 24px rgba(23,24,27,.05);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --papel:#0C0B26; --carta:#1A1948; --carta-2:#221F55;
+  --tinta:#F6F2F1; --tinta-suave:#A9A5BE; --linea:#2B2974;
+  --n1-bg:#221F55; --n1-tx:#A9A5BE; --n2-bg:#3B3886; --n2-tx:#EDEAF4;
+  --n3-bg:#9D99C4; --n3-tx:#0C0B26; --n4-bg:#F6F2F1; --n4-tx:#0C0B26;
+  --sin-bg:#1A1948; --sin-tx:#8F8BA8;
+  --rojo:#FF5A6E; --rojo-hover:#FF7585; --ok:#7FD0A8; --aviso:#FBC600;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --papel:#0C0B26; --carta:#1A1948; --carta-2:#221F55;
+  --tinta:#F6F2F1; --tinta-suave:#A9A5BE; --linea:#2B2974;
+  --n1-bg:#221F55; --n1-tx:#A9A5BE; --n2-bg:#3B3886; --n2-tx:#EDEAF4;
+  --n3-bg:#9D99C4; --n3-tx:#0C0B26; --n4-bg:#F6F2F1; --n4-tx:#0C0B26;
+  --sin-bg:#1A1948; --sin-tx:#8F8BA8;
+  --rojo:#FF5A6E; --rojo-hover:#FF7585; --ok:#7FD0A8; --aviso:#FBC600;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--papel);color:var(--tinta);font-family:var(--font-body);
+  font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+.wrap{max-width:720px;margin:0 auto;padding:0 16px 96px}
+h1,h2,h3{font-family:var(--font-display);text-wrap:balance;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--rojo);outline-offset:2px;border-radius:4px}
+
+/* cabecera */
+.top{position:sticky;top:0;z-index:30;background:var(--papel);border-bottom:1px solid var(--linea);
+  padding-top:env(safe-area-inset-top)}
+.top-in{max-width:720px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px}
+.marca{display:flex;align-items:center;gap:8px;min-width:0}
+.crest{height:26px;width:auto;flex:none}
+.marca b{font-family:var(--font-display);font-weight:400;font-size:15px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.marca span{font-size:11px;color:var(--tinta-suave);letter-spacing:.08em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top-acc{margin-left:auto;display:flex;gap:6px}
+.icono{background:none;border:1px solid var(--linea);border-radius:8px;padding:6px 10px;font-size:12px;
+  color:var(--tinta-suave);font-weight:600}
+.icono:hover{border-color:var(--tinta-suave);color:var(--tinta)}
+.barra-act{max-width:720px;margin:0 auto;padding:0 16px 10px;display:flex;gap:8px;align-items:center;
+  overflow-x:auto;scrollbar-width:none}
+.barra-act::-webkit-scrollbar{display:none}
+.pill{flex:none;font-size:12px;border:1px solid var(--linea);background:var(--carta);border-radius:999px;
+  padding:3px 10px;color:var(--tinta-suave);white-space:nowrap}
+.pill b{color:var(--tinta);font-weight:600}
+
+/* bloques */
+.seccion{margin-top:22px}
+.seccion > h2{font-family:var(--font-fuerte);font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--tinta-suave);margin-bottom:8px}
+.carta{background:var(--carta);border:1px solid var(--linea);border-radius:var(--r);box-shadow:var(--sombra)}
+.vacio{padding:18px;color:var(--tinta-suave);font-size:14px}
+
+/* lista de deportistas */
+.dep{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:none;border:0;
+  border-bottom:1px solid var(--linea);padding:13px 14px}
+.dep:last-child{border-bottom:0}
+.dep:hover{background:var(--carta-2)}
+.dep-id{font-size:11px;color:var(--tinta-suave);font-variant-numeric:tabular-nums;min-width:46px}
+.dep-nom{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prog{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--tinta-suave);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.prog-barra{width:54px;height:5px;border-radius:3px;background:var(--carta-2);overflow:hidden}
+.prog-barra i{display:block;height:100%;background:var(--n3-bg)}
+.prog.listo{color:var(--ok);font-weight:600}
+
+/* ficha deportista */
+.ficha-top{display:flex;align-items:flex-start;gap:12px;padding:16px 0 8px}
+.ficha-top h1{font-family:var(--font-fuerte);font-size:24px;font-weight:700;letter-spacing:-.01em;flex:1;min-width:0}
+.volver{background:none;border:0;color:var(--tinta-suave);font-size:13px;font-weight:600;padding:6px 0}
+.volver:hover{color:var(--rojo)}
+.eje-h{display:flex;align-items:baseline;gap:10px;margin:22px 0 8px}
+.eje-h h2{font-family:var(--font-fuerte);font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.eje-h span{font-size:12px;color:var(--tinta-suave);font-variant-numeric:tabular-nums}
+
+/* ítem */
+.item{border-bottom:1px solid var(--linea)}
+.item:last-child{border-bottom:0}
+.item-head{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:12px 14px;text-align:left}
+.item-head:hover{background:var(--carta-2)}
+.item-n{font-size:11px;color:var(--tinta-suave);font-variant-numeric:tabular-nums;min-width:20px}
+.item-nom{flex:1;font-weight:600;font-size:15px;min-width:0}
+.chip{font-size:11px;font-weight:700;letter-spacing:.04em;border-radius:999px;padding:4px 9px;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.chip i{font-style:normal;opacity:.65;font-size:10px;font-variant-numeric:tabular-nums}
+.chip.sin{background:var(--sin-bg);color:var(--sin-tx);border:1px dashed var(--linea)}
+.chip.n1{background:var(--n1-bg);color:var(--n1-tx)} .chip.n2{background:var(--n2-bg);color:var(--n2-tx)}
+.chip.n3{background:var(--n3-bg);color:var(--n3-tx)} .chip.n4{background:var(--n4-bg);color:var(--n4-tx)}
+.item-body{padding:2px 14px 16px;border-top:1px solid var(--linea);background:var(--carta-2)}
+.mira{font-size:14px;color:var(--tinta-suave);margin:12px 0 0}
+.decide{margin:12px 0 0;padding:10px 12px;background:var(--carta);border:1px solid var(--linea);border-radius:8px}
+.decide p{margin:0;font-size:13px}
+.decide p + p{margin-top:7px;padding-top:7px;border-top:1px dotted var(--linea)}
+.decide b{font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-suave);
+  display:block;margin-bottom:1px}
+.niveles{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.niv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--carta);
+  border:1px solid var(--linea);border-radius:8px;padding:10px 12px}
+.niv:hover{border-color:var(--tinta-suave)}
+.niv .marca-n{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font-weight:800;
+  font-size:12px;flex:none;font-variant-numeric:tabular-nums}
+.niv.v1 .marca-n{background:var(--n1-bg);color:var(--n1-tx)} .niv.v2 .marca-n{background:var(--n2-bg);color:var(--n2-tx)}
+.niv.v3 .marca-n{background:var(--n3-bg);color:var(--n3-tx)} .niv.v4 .marca-n{background:var(--n4-bg);color:var(--n4-tx)}
+.niv strong{font-size:14px;font-weight:700;display:block}
+.niv em{font-style:normal;font-size:12px;color:var(--tinta-suave);display:block}
+.niv[aria-pressed="true"]{border-color:var(--tinta);box-shadow:inset 0 0 0 1px var(--tinta)}
+.niv[aria-pressed="true"]::after{content:"✓";margin-left:auto;font-weight:800;color:var(--tinta)}
+.item-pie{display:flex;gap:14px;margin-top:12px;flex-wrap:wrap}
+.enlace{background:none;border:0;padding:4px 0;font-size:13px;font-weight:600;color:var(--rojo);text-decoration:underline;
+  text-underline-offset:3px}
+.enlace.gris{color:var(--tinta-suave)}
+
+/* campos */
+.campo{padding:14px}
+.campo label{display:block;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--tinta-suave);margin-bottom:6px}
+.campo .ayuda{font-size:12px;color:var(--tinta-suave);margin:-2px 0 8px}
+textarea,input[type=text],input[type=date],select{width:100%;background:var(--papel);color:var(--tinta);
+  border:1px solid var(--linea);border-radius:8px;padding:10px 12px;font:inherit;font-size:15px}
+textarea{min-height:92px;resize:vertical;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip-sel{border:1px solid var(--linea);background:var(--papel);border-radius:999px;padding:6px 12px;font-size:13px;
+  font-weight:600;color:var(--tinta-suave)}
+.chip-sel[aria-pressed="true"]{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.btn{background:var(--rojo);color:#fff;border:0;border-radius:8px;padding:12px 18px;font-weight:700;font-size:15px;white-space:nowrap}
+.btn:hover{background:var(--rojo-hover)}
+.btn.sec{background:none;color:var(--tinta);border:1px solid var(--linea)}
+.btn.sec:hover{border-color:var(--tinta-suave);background:var(--carta-2)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.fila{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.fila-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:430px){.fila-2{grid-template-columns:1fr}.prog-barra{display:none}.dep-id{min-width:40px}}
+@media(max-width:560px){#sub-marca{display:none}}
+
+/* hoja de guía */
+.hoja{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.hoja[hidden]{display:none}
+.hoja-fondo{position:absolute;inset:0;background:rgba(10,11,13,.5)}
+.hoja-caja{position:relative;background:var(--papel);width:100%;max-width:720px;max-height:92vh;overflow-y:auto;
+  border-radius:16px 16px 0 0;border:1px solid var(--linea);border-bottom:0;
+  padding:0 16px calc(28px + env(safe-area-inset-bottom))}
+.hoja-top{position:sticky;top:0;background:var(--papel);padding:14px 0 10px;border-bottom:1px solid var(--linea);
+  display:flex;align-items:flex-start;gap:12px;z-index:2}
+.hoja-top h2{font-family:var(--font-fuerte);font-size:20px;font-weight:700;flex:1}
+.hoja-top .eje-tag{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-suave);
+  display:block;margin-bottom:2px}
+.g-h{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-suave);
+  margin:18px 0 6px}
+.hoja-caja p{margin:0;font-size:14px}
+.hoja-caja ul{margin:0;padding-left:18px;font-size:14px}
+.hoja-caja li{margin-bottom:5px}
+.nivel-g{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--linea)}
+.nivel-g .marca-n{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font-weight:800;font-size:12px;flex:none}
+.nivel-g.e1 .marca-n{background:var(--n1-bg);color:var(--n1-tx)} .nivel-g.e2 .marca-n{background:var(--n2-bg);color:var(--n2-tx)}
+.nivel-g.e3 .marca-n{background:var(--n3-bg);color:var(--n3-tx)} .nivel-g.e4 .marca-n{background:var(--n4-bg);color:var(--n4-tx)}
+.nivel-g.actual{background:var(--carta);box-shadow:inset 3px 0 0 var(--rojo);padding-left:10px;margin-left:-10px;
+  border-radius:0 6px 6px 0}
+.nivel-g strong{font-size:13px;display:block;margin-bottom:2px}
+.nivel-g p{font-size:13px;color:var(--tinta-suave)}
+table.cat{width:100%;border-collapse:collapse;font-size:13px;margin-top:4px}
+table.cat th,table.cat td{text-align:left;vertical-align:top;padding:8px 10px;border:1px solid var(--linea)}
+table.cat th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-suave);font-weight:700;
+  background:var(--carta-2)}
+table.cat tr.actual td,table.cat tr.actual th{background:var(--carta);box-shadow:inset 0 0 0 1px var(--tinta-suave)}
+.reglas{background:var(--carta);border:1px solid var(--linea);border-radius:8px;padding:12px 14px;margin-top:18px}
+.reglas li{font-size:13px;color:var(--tinta-suave)}
+.aviso{font-size:13px;color:var(--aviso);background:var(--carta);border:1px solid var(--linea);
+  border-left:3px solid var(--aviso);border-radius:0 8px 8px 0;padding:10px 12px}
+.nota{font-size:13px;color:var(--tinta-suave)}
+.pie-fijo{position:fixed;left:0;right:0;bottom:0;z-index:20;background:linear-gradient(to top,var(--papel) 70%,transparent);
+  padding:12px 16px calc(14px + env(safe-area-inset-bottom))}
+.pie-in{max-width:720px;margin:0 auto;display:flex;gap:8px}
+.pie-in .btn{flex:1}
+.sync{font-size:11px;color:var(--tinta-suave);text-align:center;padding:10px 0 0}
+.oculto{display:none}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="marca"><img src="fonts/crest.png" alt="" class="crest"><b>Hockey España</b><span id="sub-marca">Radar de Desarrollo</span></div>
+    <div class="top-acc">
+      <button class="icono" id="btn-preparar">Actividad</button>
+      <button class="icono" id="btn-ajustes">Ajustes</button>
+    </div>
+  </div>
+  <div class="barra-act" id="barra-act"></div>
+</header>
+<main class="wrap" id="app"></main>
+<div class="pie-fijo oculto" id="pie"><div class="pie-in" id="pie-in"></div></div>
+
+<div class="hoja" id="hoja" hidden>
+  <div class="hoja-fondo" data-cerrar></div>
+  <div class="hoja-caja" id="hoja-caja" role="dialog" aria-modal="true" aria-label="Guía del ítem"></div>
+</div>
+
+<script>
+"use strict";
+const NIVELES = [
+  {n:1, nombre:"Prioridad de mejora", cad:"Rara vez"},
+  {n:2, nombre:"A mejorar",           cad:"A veces; depende de la tarea"},
+  {n:3, nombre:"Competente",          cad:"La mayoría de las veces"},
+  {n:4, nombre:"Fortaleza",           cad:"Casi siempre, también bajo presión alta"}
+];
+const EJES = [
+  {id:"TÉCNICO", corto:"Técnico"},
+  {id:"TÁCTICO-DECISIONAL", corto:"Táctico-decisional"},
+  {id:"MINDSET", corto:"Mindset"}
+];
+const ESPECIALIDADES = ["Tirador de PC","Sacador de PC","Parador de PC","Defensa de PC","Stroke","Shoot-out","Polivalencia"];
+const CLAVE = "radar-he-v1";
+const SIN_DATOS = {observador:"", rol:"", actividades:{}, actual:null, val:{}, demo:true};
+const ROLES = ["Seleccionador", "Asistente", "Técnico de apoyo"];
+
+let ITEMS = [];
+let S = cargar();
+let vista = {n:"grupo", dep:null, abierto:null};
+let idActividadPendiente = null;
+
+/* ---------- almacenamiento local ---------- */
+function cargar(){
+  try{
+    const raw = localStorage.getItem(CLAVE);
+    if(raw) return Object.assign({}, SIN_DATOS, JSON.parse(raw));
+  }catch(e){}
+  return JSON.parse(JSON.stringify(SIN_DATOS));
+}
+function guardar(){
+  try{ localStorage.setItem(CLAVE, JSON.stringify(S)); }catch(e){}
+}
+function uuid(){ return "e"+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4); }
+
+/* ---------- datos de ejemplo ---------- */
+function actividadEjemplo(){
+  return {
+    id:"EJEMPLO", nombre:"Ejemplo · Stage de prueba", fecha:new Date().toISOString().slice(0,10),
+    grupo:"Sub-16 Masculino", categoria:"sub16", ejemplo:true,
+    deportistas:[1,2,3,4,5,6].map(i=>({id:"EJ-"+i, nombre:"Deportista de ejemplo "+i}))
+  };
+}
+function asegurarEjemplo(){
+  if(S.demo && Object.keys(S.actividades).length===0){
+    const a = actividadEjemplo(); S.actividades[a.id]=a; S.actual=a.id; guardar();
+  }
+}
+
+/* ---------- acceso a las observaciones ---------- */
+function act(){ return S.actividades[S.actual] || null; }
+function vdep(depId){
+  const a = act(); if(!a) return null;
+  S.val[a.id] = S.val[a.id] || {};
+  if(!S.val[a.id][depId]) S.val[a.id][depId] = {items:{}, com:{}, rasgo:"", esp:[]};
+  return S.val[a.id][depId];
+}
+function hechos(depId){
+  const a = act(); if(!a) return 0;
+  const v = (S.val[a.id]||{})[depId]; if(!v) return 0;
+  return Object.values(v.items).filter(x=>x>=1&&x<=4).length;
+}
+function itemsDe(eje){ return ITEMS.filter(i=>i.eje===eje); }
+function item(n){ return ITEMS.find(i=>i.n===n); }
+
+/* ---------- utilidades ---------- */
+function el(tag, cls, txt){ const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; }
+function esc(s){ return String(s==null?"":s); }
+function chipNivel(v){
+  const c = el("span","chip "+(v?("n"+v):"sin"));
+  if(v){ c.append(document.createTextNode(NIVELES[v-1].nombre)); const i=el("i",null,String(v)); c.append(i); }
+  else c.textContent = "Sin situar";
+  return c;
+}
+
+/* ---------- cabecera ---------- */
+function pintarBarra(){
+  const b = document.getElementById("barra-act"); b.textContent="";
+  const a = act();
+  if(!a){ b.append(Object.assign(el("span","pill"),{textContent:"Sin actividad cargada"})); return; }
+  const p1 = el("span","pill"); p1.append(el("b",null,a.grupo)); b.append(p1);
+  const p2 = el("span","pill", a.nombre + " · " + a.fecha); b.append(p2);
+  if(a.ejemplo){ const p3=el("span","pill","Datos de ejemplo"); p3.style.color="var(--aviso)"; b.append(p3); }
+  if(S.observador){ b.append(el("span","pill", S.observador)); }
+}
+
+/* ---------- vista: grupo ---------- */
+function vistaGrupo(app){
+  const a = act();
+  const h = el("div","ficha-top");
+  const t = el("h1", null, a ? a.grupo : "Radar de Desarrollo");
+  h.append(t); app.append(h);
+  if(!a){
+    const c = el("div","carta vacio");
+    c.append(el("p",null,"No hay ninguna actividad en este dispositivo. Pide al Área de Alto Rendimiento el código de la actividad y pégalo en Actividad."));
+    app.append(c); return;
+  }
+  if(!S.observador){
+    const av = el("div","aviso","Pon tu nombre en Ajustes antes de empezar: va en el archivo que se envía al Área de Alto Rendimiento.");
+    av.style.marginBottom="12px"; app.append(av);
+  }
+  const s = el("section","seccion");
+  s.append(el("h2",null,"Deportistas · "+a.deportistas.length));
+  const lista = el("div","carta");
+  a.deportistas.forEach(d=>{
+    const b = el("button","dep"); b.type="button";
+    b.append(el("span","dep-id", d.id));
+    b.append(el("span","dep-nom", d.nombre));
+    const n = hechos(d.id);
+    const pr = el("span","prog"+(n===20?" listo":""));
+    const barra = el("span","prog-barra"); const i = el("i"); i.style.width = (n/20*100)+"%"; barra.append(i);
+    pr.append(barra, el("span",null, n===20 ? "20/20" : n+"/20"));
+    b.append(pr);
+    b.addEventListener("click", ()=>{ vista={n:"ficha", dep:d.id, abierto:null}; pintar(); window.scrollTo(0,0); });
+    lista.append(b);
+  });
+  s.append(lista); app.append(s);
+
+  const s2 = el("section","seccion");
+  s2.append(el("h2",null,"Cuando termines"));
+  const c2 = el("div","carta campo");
+  c2.append(el("p","ayuda", spConfigurado() ? "Descarga el archivo para tu registro, o manda tus observaciones directamente a la lista del Área de Alto Rendimiento." : "Descarga el archivo y envíalo al Área de Alto Rendimiento por el canal interno."));
+  const f = el("div","fila");
+  const b1 = el("button","btn","Descargar observaciones (CSV)"); b1.type="button";
+  b1.addEventListener("click", ()=>exportar("csv"));
+  const b2 = el("button","btn sec","Paquete para informes (JSON)"); b2.type="button";
+  b2.addEventListener("click", ()=>exportar("json"));
+  f.append(b1,b2); c2.append(f);
+  if(spConfigurado()){
+    const sep = el("div"); sep.style.marginTop="14px"; sep.style.paddingTop="14px";
+    sep.style.borderTop="1px solid var(--linea)";
+    const b3 = el("button","btn","Enviar al Área de Alto Rendimiento"); b3.type="button";
+    const est = el("p","nota"); est.style.marginTop="8px"; est.textContent = textoEstadoMS();
+    b3.addEventListener("click", async ()=>{
+      b3.disabled = true; est.style.color="var(--tinta-suave)";
+      try{
+        if(!cuentaMS){ est.textContent="Abriendo el inicio de sesión de Microsoft…"; await entrarMS(); return; }
+        const n = await enviarSharePoint((hecho,total)=>{ est.textContent = "Enviando… "+hecho+" de "+total; });
+        est.textContent = "Enviados "+n+" deportistas. Ya está en la lista del Área de Alto Rendimiento.";
+        est.style.color = "var(--ok)";
+      }catch(e){
+        est.textContent = e.message || "No se ha podido enviar.";
+        est.style.color = "var(--aviso)";
+      }finally{ b3.disabled = false; }
+    });
+    sep.append(b3, est); c2.append(sep);
+  }
+  s2.append(c2); app.append(s2);
+}
+
+/* ---------- vista: ficha de un deportista ---------- */
+function vistaFicha(app){
+  const a = act(); const d = a.deportistas.find(x=>x.id===vista.dep);
+  if(!d){ vista={n:"grupo"}; return pintar(); }
+  const v = vdep(d.id);
+
+  const volver = el("button","volver","‹ Todo el grupo"); volver.type="button";
+  volver.addEventListener("click", ()=>{ vista={n:"grupo"}; pintar(); window.scrollTo(0,0); });
+  app.append(volver);
+
+  const top = el("div","ficha-top");
+  const t = el("h1",null,d.nombre); top.append(t);
+  app.append(top);
+  const sub = el("p","nota", d.id + " · " + hechos(d.id) + " de 20 ítems situados · los que no hayas visto se quedan sin situar");
+  app.append(sub);
+
+  EJES.forEach(eje=>{
+    const its = itemsDe(eje.id);
+    const eh = el("div","eje-h");
+    eh.append(el("h2",null,eje.corto));
+    const n = its.filter(i=>v.items[i.n]).length;
+    eh.append(el("span",null, n+"/"+its.length));
+    app.append(eh);
+
+    const caja = el("div","carta");
+    its.forEach(it=> caja.append(filaItem(it, v, d)));
+    app.append(caja);
+
+    const cc = el("div","carta campo"); cc.style.marginTop="10px";
+    const lab = el("label",null,"Comentario de "+eje.corto);
+    lab.setAttribute("for","com-"+eje.id);
+    cc.append(lab);
+    cc.append(el("p","ayuda","Concreto y entrenable. Sin comparaciones con el grupo ni juicios sobre su futuro."));
+    const ta = el("textarea"); ta.id = "com-"+eje.id;
+    ta.placeholder = "Ej.: push y golpeo precisos con presión; el pase de revés raso se le queda corto.";
+    ta.value = v.com[eje.id] || "";
+    ta.addEventListener("input", ()=>{ v.com[eje.id]=ta.value; guardarYSync(d.id); });
+    cc.append(ta); app.append(cc);
+  });
+
+  /* rasgo diferencial + especialización */
+  const s = el("section","seccion");
+  s.append(el("h2",null,"Además del Radar"));
+  const c = el("div","carta");
+  const c1 = el("div","campo");
+  const l1 = el("label",null,"Rasgo diferencial"); l1.setAttribute("for","rasgo"); c1.append(l1);
+  c1.append(el("p","ayuda","La característica determinante de este deportista, en una frase. No lleva nivel."));
+  const inp = el("input"); inp.type="text"; inp.id="rasgo"; inp.value = v.rasgo||"";
+  inp.placeholder = "Ej.: velocidad de ejecución en espacios cortos";
+  inp.addEventListener("input", ()=>{ v.rasgo=inp.value; guardarYSync(d.id); });
+  c1.append(inp); c.append(c1);
+
+  const c2 = el("div","campo"); c2.style.borderTop="1px solid var(--linea)";
+  c2.append(el("label",null,"Especialización"));
+  c2.append(el("p","ayuda","Ninguna, una o varias. No entra en el Radar: queda para el seguimiento."));
+  const chips = el("div","chips");
+  ESPECIALIDADES.forEach(e=>{
+    const b = el("button","chip-sel", e); b.type="button";
+    const on = (v.esp||[]).includes(e);
+    b.setAttribute("aria-pressed", on?"true":"false");
+    b.addEventListener("click", ()=>{
+      v.esp = v.esp||[];
+      const i = v.esp.indexOf(e);
+      if(i>=0) v.esp.splice(i,1); else v.esp.push(e);
+      b.setAttribute("aria-pressed", v.esp.includes(e)?"true":"false");
+      guardarYSync(d.id);
+    });
+    chips.append(b);
+  });
+  c2.append(chips); c.append(c2); s.append(c); app.append(s);
+
+  /* navegación entre deportistas */
+  const idx = a.deportistas.findIndex(x=>x.id===d.id);
+  const pie = document.getElementById("pie"); const pin = document.getElementById("pie-in");
+  pie.classList.remove("oculto"); pin.textContent="";
+  const bAnt = el("button","btn sec","‹ Anterior"); bAnt.type="button"; bAnt.disabled = idx===0;
+  bAnt.addEventListener("click", ()=>{ vista={n:"ficha", dep:a.deportistas[idx-1].id}; pintar(); window.scrollTo(0,0); });
+  const bLista = el("button","btn sec","Grupo"); bLista.type="button";
+  bLista.addEventListener("click", ()=>{ vista={n:"grupo"}; pintar(); window.scrollTo(0,0); });
+  const bSig = el("button","btn", idx===a.deportistas.length-1 ? "Terminar" : "Siguiente ›"); bSig.type="button";
+  bSig.addEventListener("click", ()=>{
+    if(idx===a.deportistas.length-1){ vista={n:"grupo"}; } else { vista={n:"ficha", dep:a.deportistas[idx+1].id}; }
+    pintar(); window.scrollTo(0,0);
+  });
+  pin.append(bAnt,bLista,bSig);
+}
+
+function filaItem(it, v, d){
+  const art = el("article","item");
+  const head = el("button","item-head"); head.type="button";
+  head.setAttribute("aria-expanded", vista.abierto===it.n ? "true":"false");
+  head.append(el("span","item-n", String(it.n).padStart(2,"0")));
+  head.append(el("span","item-nom", it.nombre));
+  head.append(chipNivel(v.items[it.n]));
+  head.addEventListener("click", ()=>{
+    vista.abierto = (vista.abierto===it.n) ? null : it.n;
+    pintar();
+    if(vista.abierto===it.n){
+      const n = document.querySelector('[data-item="'+it.n+'"]');
+      if(n) n.scrollIntoView({block:"center", behavior:"smooth"});
+    }
+  });
+  art.append(head);
+  if(vista.abierto!==it.n) return art;
+
+  const body = el("div","item-body"); body.setAttribute("data-item", it.n);
+  body.append(el("p","mira", it.mira));
+
+  const dec = el("div","decide");
+  const p1 = el("p"); p1.append(el("b",null,"¿A mejorar o competente?"), document.createTextNode(it.q[0]));
+  const p2 = el("p"); p2.append(el("b",null,"¿Competente o fortaleza?"), document.createTextNode(it.q[1]));
+  dec.append(p1,p2); body.append(dec);
+
+  const nivs = el("div","niveles");
+  NIVELES.forEach(N=>{
+    const b = el("button","niv v"+N.n); b.type="button";
+    b.setAttribute("aria-pressed", v.items[it.n]===N.n ? "true":"false");
+    b.append(el("span","marca-n", String(N.n)));
+    const txt = el("span");
+    txt.append(el("strong",null,N.nombre), el("em",null,N.cad));
+    b.append(txt);
+    b.addEventListener("click", ()=>{
+      v.items[it.n] = (v.items[it.n]===N.n) ? undefined : N.n;
+      if(v.items[it.n]===undefined) delete v.items[it.n];
+      guardarYSync(d.id);
+      const sig = siguienteItem(it.n, v);
+      vista.abierto = v.items[it.n] ? sig : it.n;
+      pintar();
+      if(vista.abierto){
+        const nd = document.querySelector('[data-item="'+vista.abierto+'"]');
+        if(nd) nd.scrollIntoView({block:"center", behavior:"smooth"});
+      }
+    });
+    nivs.append(b);
+  });
+  body.append(nivs);
+
+  const pie = el("div","item-pie");
+  const g = el("button","enlace","Guía de este ítem"); g.type="button";
+  g.addEventListener("click", ()=>abrirHoja(it.n, v.items[it.n]));
+  pie.append(g);
+  if(v.items[it.n]){
+    const s = el("button","enlace gris","Dejar sin situar"); s.type="button";
+    s.addEventListener("click", ()=>{ delete v.items[it.n]; guardarYSync(d.id); pintar(); });
+    pie.append(s);
+  }
+  body.append(pie);
+  art.append(body);
+  return art;
+}
+function siguienteItem(n, v){
+  for(let k=n+1;k<=20;k++){ if(!v.items[k]) return k; }
+  for(let k=1;k<n;k++){ if(!v.items[k]) return k; }
+  return null;
+}
+
+/* ---------- hoja: guía del ítem ---------- */
+function abrirHoja(n, nivelActual){
+  const it = item(n); const a = act();
+  const cat = a && a.categoria === "sub15" ? "sub15" : "sub16";
+  const caja = document.getElementById("hoja-caja"); caja.textContent="";
+
+  const top = el("div","hoja-top");
+  const tit = el("div");
+  tit.append(el("span","eje-tag", it.eje + " · ítem " + it.n + " de 20"));
+  tit.append(el("h2",null,it.nombre));
+  top.append(tit);
+  const x = el("button","icono","Cerrar"); x.type="button"; x.setAttribute("data-cerrar","");
+  top.append(x); caja.append(top);
+
+  caja.append(el("div","g-h","Qué miramos"));
+  caja.append(el("p",null,it.mira));
+  caja.append(el("div","g-h","Dónde se ve"));
+  caja.append(el("p",null,it.donde));
+  if(it.gestos && it.gestos.length){
+    caja.append(el("div","g-h","Qué gestos esperamos"));
+    const ul = el("ul"); it.gestos.forEach(g=>ul.append(el("li",null,g))); caja.append(ul);
+  }
+  caja.append(el("div","g-h","En qué fijarse"));
+  const ul2 = el("ul"); it.fijarse.forEach(g=>ul2.append(el("li",null,g))); caja.append(ul2);
+  caja.append(el("div","g-h","No lo confundas con"));
+  const ul3 = el("ul"); it.confundir.forEach(g=>ul3.append(el("li",null,g))); caja.append(ul3);
+
+  caja.append(el("div","g-h","Cómo se ve en cada nivel"));
+  NIVELES.forEach(N=>{
+    const d = el("div","nivel-g e"+N.n+(nivelActual===N.n?" actual":""));
+    d.append(el("span","marca-n",String(N.n)));
+    const c = el("div");
+    c.append(el("strong",null,N.nombre));
+    c.append(el("p",null,it.niv[N.n-1]));
+    d.append(c); caja.append(d);
+  });
+
+  caja.append(el("div","g-h","Las dos preguntas que lo deciden"));
+  const dec = el("div","decide");
+  const p1 = el("p"); p1.append(el("b",null,"¿A mejorar o competente?"), document.createTextNode(it.q[0]));
+  const p2 = el("p"); p2.append(el("b",null,"¿Competente o fortaleza?"), document.createTextNode(it.q[1]));
+  dec.append(p1,p2); caja.append(dec);
+
+  if(it.cat){
+    caja.append(el("div","g-h","Qué se espera en cada categoría"));
+    const tb = el("table","cat");
+    const thead = el("thead"); const trh = el("tr");
+    trh.append(el("th",null,""), el("th",null,"Competente"), el("th",null,"Fortaleza"));
+    thead.append(trh); tb.append(thead);
+    const tbody = el("tbody");
+    [["sub15","Sub-15"],["sub16","Sub-16"]].forEach(([k,lab])=>{
+      const tr = el("tr", k===cat ? "actual" : null);
+      tr.append(el("th",null,lab), el("td",null,it.cat[k].competente), el("td",null,it.cat[k].fortaleza));
+      tbody.append(tr);
+    });
+    tb.append(tbody); caja.append(tb);
+  }
+  if(it.nota){
+    caja.append(el("div","g-h","Según la categoría"));
+    caja.append(el("p","nota", it.nota));
+  }
+
+  const reglas = el("div","reglas");
+  reglas.append(el("div","g-h","Reglas de uso"));
+  const ur = el("ul");
+  [["«Competente» no es el nivel por defecto: afirma que lo hace con la presión de su categoría. Si no lo has visto, déjalo sin situar."],
+   ["Mínimo de observación: sitúa un ítem solo si lo has visto en al menos dos sesiones, una de ellas con oposición real."],
+   ["Un ítem, una conducta. Cada ítem se lee por lo que define, no por la impresión general."],
+   ["La categoría cambia la exigencia, no la conducta: la misma acción puede ser Competente en Sub-15 y A mejorar en Sub-16."],
+   ["El nivel compara al deportista con lo que se espera de su categoría, nunca con el resto del grupo. No hay cupos."]
+  ].forEach(([t])=>ur.append(el("li",null,t)));
+  reglas.append(ur); caja.append(reglas);
+
+  document.getElementById("hoja").hidden = false;
+  document.body.style.overflow = "hidden";
+  caja.scrollTop = 0;
+}
+function cerrarHoja(){
+  document.getElementById("hoja").hidden = true;
+  document.body.style.overflow = "";
+}
+
+/* ---------- vista: preparar actividad ---------- */
+function vistaPreparar(app){
+  const volver = el("button","volver","‹ Volver"); volver.type="button";
+  volver.addEventListener("click", ()=>{ vista={n:"grupo"}; pintar(); });
+  app.append(volver);
+  const topP = el("div","ficha-top"); topP.append(el("h1",null,"Actividad")); app.append(topP);
+
+  /* cargar por código */
+  const s1 = el("section","seccion");
+  s1.append(el("h2",null,"Cargar la actividad que te han enviado"));
+  const c1 = el("div","carta campo");
+  c1.append(el("p","ayuda","Pega el código que te manda el Área de Alto Rendimiento. Se queda guardado en este móvil."));
+  const ta = el("textarea"); ta.placeholder="Pega aquí el código de la actividad"; c1.append(ta);
+  const f1 = el("div","fila"); f1.style.marginTop="10px";
+  const b1 = el("button","btn","Cargar"); b1.type="button";
+  const msg1 = el("span","nota","");
+  b1.addEventListener("click", ()=>{
+    try{
+      const a = JSON.parse(decodeURIComponent(escape(atob(ta.value.trim()))));
+      if(!a.id || !Array.isArray(a.deportistas)) throw new Error("formato");
+      S.actividades[a.id]=a; S.actual=a.id; S.demo=false;
+      if(a.rol && !S.rol) S.rol = a.rol;
+      delete S.actividades["EJEMPLO"];
+      guardar(); vista={n:"grupo"}; pintar(); window.scrollTo(0,0);
+    }catch(e){ msg1.textContent="Ese código no se entiende. Pídelo otra vez al Área de Alto Rendimiento."; msg1.style.color="var(--aviso)"; }
+  });
+  f1.append(b1, msg1); c1.append(f1); s1.append(c1); app.append(s1);
+
+  /* crear actividad */
+  const s2 = el("section","seccion");
+  s2.append(el("h2",null,"Preparar una actividad (Área de Alto Rendimiento)"));
+  const c2 = el("div","carta campo");
+  const g = el("div","fila-2");
+  const campos = {};
+  [["nombre","Actividad","Ej.: Stage Sub-16 Masculino · diciembre"],["fecha","Fecha",""],
+   ["grupo","Grupo de trabajo","Ej.: Sub-16 Masculino"]].forEach(([k,lab,ph])=>{
+    const d = el("div");
+    const l = el("label",null,lab); l.setAttribute("for","c-"+k); d.append(l);
+    const i = el("input"); i.id="c-"+k; i.type = k==="fecha" ? "date":"text"; if(ph) i.placeholder=ph;
+    if(k==="fecha") i.value = new Date().toISOString().slice(0,10);
+    campos[k]=i; d.append(i); g.append(d);
+  });
+  const drol = el("div");
+  const lrol = el("label",null,"Rol de quien lo recibe"); lrol.setAttribute("for","c-rol"); drol.append(lrol);
+  const selR = el("select"); selR.id="c-rol";
+  ROLES.forEach(r=>{ const o=el("option",null,r); o.value=r; selR.append(o); });
+  campos.rol = selR; drol.append(selR);
+  const dcat = el("div");
+  const lcat = el("label",null,"Categoría"); lcat.setAttribute("for","c-cat"); dcat.append(lcat);
+  const sel = el("select"); sel.id="c-cat";
+  [["sub16","Sub-16"],["sub15","Sub-15"]].forEach(([v,t])=>{ const o=el("option",null,t); o.value=v; sel.append(o); });
+  campos.categoria = sel; dcat.append(sel); g.append(dcat); g.append(drol);
+  c2.append(g);
+  c2.append(el("p","ayuda","Genera un código por rol: el del seleccionador y el de su asistente son distintos, y así cada archivo llega firmado."));
+
+  const l2 = el("label",null,"Deportistas"); l2.style.marginTop="14px"; l2.setAttribute("for","c-deps"); c2.append(l2);
+  c2.append(el("p","ayuda","Una por línea: ID y nombre separados por coma o tabulador. El ID es el que se mantiene entre convocatorias; es lo único que viaja a la base de datos."));
+  const tad = el("textarea"); tad.id="c-deps"; tad.placeholder="2011-0042, Nombre Apellido\n2011-0043, Nombre Apellido";
+  c2.append(tad);
+  const f2 = el("div","fila"); f2.style.marginTop="12px";
+  const b2 = el("button","btn","Generar código"); b2.type="button";
+  const msg2 = el("span","nota","");
+  const salida = el("textarea"); salida.readOnly=true; salida.className="oculto"; salida.style.marginTop="10px";
+  const f3 = el("div","fila oculto"); f3.style.marginTop="8px";
+  const bCopiar = el("button","btn sec","Copiar código"); bCopiar.type="button";
+  const bUsar = el("button","btn sec","Usar en este dispositivo"); bUsar.type="button";
+  f3.append(bCopiar,bUsar);
+  let creada = null;
+  b2.addEventListener("click", ()=>{
+    const deps = tad.value.split("\n").map(l=>l.trim()).filter(Boolean).map((l,i)=>{
+      const p = l.split(/[\t,;]+/).map(x=>x.trim()).filter(Boolean);
+      if(p.length>=2) return {id:p[0], nombre:p.slice(1).join(" ")};
+      return {id:"D"+String(i+1).padStart(2,"0"), nombre:p[0]};
+    });
+    if(!campos.nombre.value.trim() || !campos.grupo.value.trim() || deps.length===0){
+      msg2.textContent="Faltan la actividad, el grupo o la lista de deportistas."; msg2.style.color="var(--aviso)"; return;
+    }
+    creada = {
+      id: campos.grupo.value.trim().replace(/[^A-Za-z0-9]+/g,"-").toUpperCase()+"-"+campos.fecha.value,
+      nombre: campos.nombre.value.trim(), fecha: campos.fecha.value,
+      grupo: campos.grupo.value.trim(), categoria: campos.categoria.value,
+      rol: campos.rol.value, deportistas: deps
+    };
+    salida.value = btoa(unescape(encodeURIComponent(JSON.stringify(creada))));
+    salida.classList.remove("oculto"); f3.classList.remove("oculto");
+    msg2.textContent = deps.length+" deportistas · "+creada.rol+". Envía el código por el canal interno."; msg2.style.color="var(--tinta-suave)";
+  });
+  bCopiar.addEventListener("click", async ()=>{
+    try{ await navigator.clipboard.writeText(salida.value); bCopiar.textContent="Copiado"; setTimeout(()=>bCopiar.textContent="Copiar código",1600); }
+    catch(e){ salida.select(); bCopiar.textContent="Selecciona y copia"; }
+  });
+  bUsar.addEventListener("click", ()=>{
+    if(!creada) return;
+    S.actividades[creada.id]=creada; S.actual=creada.id; S.demo=false;
+    delete S.actividades["EJEMPLO"];
+    guardar(); vista={n:"grupo"}; pintar(); window.scrollTo(0,0);
+  });
+  f2.append(b2,msg2); c2.append(f2,salida,f3); s2.append(c2); app.append(s2);
+
+  /* cambiar de actividad */
+  const ids = Object.keys(S.actividades);
+  if(ids.length>1){
+    const s3 = el("section","seccion");
+    s3.append(el("h2",null,"Actividades en este dispositivo"));
+    const c3 = el("div","carta");
+    ids.forEach(id=>{
+      const a = S.actividades[id];
+      const b = el("button","dep"); b.type="button";
+      b.append(el("span","dep-nom", a.grupo+" · "+a.nombre));
+      b.append(el("span","prog", id===S.actual?"En uso":"Usar"));
+      b.addEventListener("click", ()=>{ S.actual=id; guardar(); vista={n:"grupo"}; pintar(); window.scrollTo(0,0); });
+      c3.append(b);
+    });
+    s3.append(c3); app.append(s3);
+  }
+}
+
+/* ---------- vista: ajustes ---------- */
+function vistaAjustes(app){
+  const volver = el("button","volver","‹ Volver"); volver.type="button";
+  volver.addEventListener("click", ()=>{ vista={n:"grupo"}; pintar(); });
+  app.append(volver);
+  const top = el("div","ficha-top"); top.append(el("h1",null,"Ajustes")); app.append(top);
+
+  const s1 = el("section","seccion");
+  s1.append(el("h2",null,"Quién observa"));
+  const c1 = el("div","carta campo");
+  const l = el("label",null,"Tu nombre"); l.setAttribute("for","ev"); c1.append(l);
+  c1.append(el("p","ayuda","Va en el archivo que envías. No aparece en el informe del deportista: el informe lo firma el cuerpo técnico."));
+  const i = el("input"); i.type="text"; i.id="ev"; i.value=S.observador||""; i.placeholder="Nombre y apellido";
+  i.addEventListener("input", ()=>{ S.observador=i.value; guardar(); pintarBarra(); });
+  c1.append(i);
+  const l2 = el("label",null,"Tu rol en este grupo"); l2.setAttribute("for","rol");
+  l2.style.marginTop="14px"; c1.append(l2);
+  c1.append(el("p","ayuda","En caso de discrepancia prevalece el seleccionador. La regla se aplica al juntar los archivos, no aquí."));
+  const selRol = el("select"); selRol.id="rol";
+  const vacia = el("option",null,"Sin indicar"); vacia.value=""; selRol.append(vacia);
+  ROLES.forEach(r=>{ const o=el("option",null,r); o.value=r; selRol.append(o); });
+  selRol.value = S.rol || "";
+  selRol.addEventListener("change", ()=>{ S.rol=selRol.value; guardar(); });
+  c1.append(selRol);
+  s1.append(c1); app.append(s1);
+
+  const s2 = el("section","seccion");
+  s2.append(el("h2",null,"Dónde están tus observaciones"));
+  const c2 = el("div","carta campo");
+  const p = el("p","nota");
+  p.textContent = "Se guardan en este dispositivo según las vas tocando, también sin cobertura. Al enviar, viajan a la lista de Hockey España en SharePoint con tu propia cuenta: ves y escribes lo que tu cuenta tenga permitido.";
+  c2.append(p);
+  const est = el("p","nota"); est.id="estado-sync"; est.style.marginTop="8px";
+  est.textContent = "Sincronización: comprobando…";
+  c2.append(est);
+  const f = el("div","fila"); f.style.marginTop="12px";
+  const b1 = el("button","btn","Descargar CSV"); b1.type="button"; b1.addEventListener("click",()=>exportar("csv"));
+  const b2 = el("button","btn sec","Descargar JSON"); b2.type="button"; b2.addEventListener("click",()=>exportar("json"));
+  f.append(b1,b2);
+  if(spConfigurado()){
+    const bs = el("button","btn sec", cuentaMS ? "Cerrar sesión de Microsoft" : "Iniciar sesión con Microsoft");
+    bs.type="button";
+    bs.addEventListener("click", async ()=>{
+      try{ if(cuentaMS) await salirMS(); else await entrarMS(); }
+      catch(e){ est.textContent = e.message; est.style.color="var(--aviso)"; }
+    });
+    f.append(bs);
+  }
+  c2.append(f); s2.append(c2); app.append(s2);
+
+  const s3 = el("section","seccion");
+  s3.append(el("h2",null,"Borrar"));
+  const c3 = el("div","carta campo");
+  c3.append(el("p","ayuda","Hazlo cuando hayas enviado el archivo y el Área de Alto Rendimiento lo haya confirmado."));
+  const b3 = el("button","btn sec","Borrar todo de este dispositivo"); b3.type="button";
+  let armado = false;
+  b3.addEventListener("click", ()=>{
+    if(!armado){ armado=true; b3.textContent="Pulsa otra vez para borrar"; b3.style.color="var(--rojo)"; return; }
+    S = JSON.parse(JSON.stringify(SIN_DATOS)); guardar(); asegurarEjemplo(); vista={n:"grupo"}; pintar();
+  });
+  c3.append(b3); s3.append(c3); app.append(s3);
+  actualizarEstadoSync();
+}
+
+/* ---------- exportar ---------- */
+function filasCSV(){
+  const a = act(); const out = [];
+  const cab = ["actividad_id","actividad","fecha","grupo","categoria","deportista_id","deportista",
+               "observador","eje","item_n","item","nivel","nivel_texto","comentario_eje","rasgo_diferencial","especializacion"];
+  out.push(cab);
+  a.deportistas.forEach(d=>{
+    const v = (S.val[a.id]||{})[d.id]; if(!v) return;
+    ITEMS.forEach(it=>{
+      const n = v.items[it.n];
+      out.push([a.id,a.nombre,a.fecha,a.grupo,a.categoria,d.id,d.nombre,S.observador||"",
+        it.eje,it.n,it.nombre, n||"", n?NIVELES[n-1].nombre:"Sin situar",
+        (v.com&&v.com[it.eje])||"", v.rasgo||"", (v.esp||[]).join(" | ")]);
+    });
+  });
+  return out;
+}
+function aCSV(filas){
+  return filas.map(f=>f.map(c=>{
+    const s = String(c==null?"":c);
+    return /[";\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(";")).join("\r\n");
+}
+function paqueteJSON(){
+  const a = act();
+  return {
+    actividad:{id:a.id,nombre:a.nombre,fecha:a.fecha,grupo:a.grupo,categoria:a.categoria},
+    observador:S.observador||"",
+    generado:new Date().toISOString(),
+    escala:NIVELES.map(n=>({n:n.n,nombre:n.nombre})),
+    deportistas:a.deportistas.map(d=>{
+      const v = (S.val[a.id]||{})[d.id] || {items:{},com:{},rasgo:"",esp:[]};
+      return {id:d.id, nombre:d.nombre, rasgo_diferencial:v.rasgo||"", especializacion:v.esp||[],
+        comentarios:v.com||{},
+        items:ITEMS.map(it=>({n:it.n, eje:it.eje, item:it.nombre,
+          nivel:v.items[it.n]||null, nivel_texto:v.items[it.n]?NIVELES[v.items[it.n]-1].nombre:null}))};
+    })
+  };
+}
+async function exportar(tipo){
+  const a = act(); if(!a) return;
+  const base = "Radar_"+a.grupo.replace(/[^A-Za-z0-9]+/g,"-")+"_"+a.fecha;
+  const datos = tipo==="csv" ? "﻿"+aCSV(filasCSV()) : JSON.stringify(paqueteJSON(), null, 1);
+  const nombre = base + (tipo==="csv" ? ".csv" : ".json");
+  try{
+    const tipoMime = tipo==="csv" ? "text/csv;charset=utf-8" : "application/json;charset=utf-8";
+    const url = URL.createObjectURL(new Blob([datos], {type:tipoMime}));
+    const a2 = document.createElement("a"); a2.href=url; a2.download=nombre;
+    document.body.append(a2); a2.click(); a2.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  }catch(e){ mostrarTexto(nombre, datos); }
+}
+function mostrarTexto(nombre, datos){
+  const caja = document.getElementById("hoja-caja"); caja.textContent="";
+  const top = el("div","hoja-top");
+  const t = el("div"); t.append(el("span","eje-tag","Archivo"), el("h2",null,nombre));
+  const x = el("button","icono","Cerrar"); x.type="button"; x.setAttribute("data-cerrar","");
+  top.append(t,x); caja.append(top);
+  caja.append(el("p","nota","Este navegador no deja descargar desde la página. Copia el contenido y pégalo en un archivo, o ábrelo desde el ordenador."));
+  const b = el("button","btn","Copiar al portapapeles"); b.type="button"; b.style.marginTop="12px";
+  b.addEventListener("click", async ()=>{
+    try{ await navigator.clipboard.writeText(datos); b.textContent="Copiado"; }
+    catch(e){ ta.select(); b.textContent="Selecciona el texto y copia"; }
+  });
+  caja.append(b);
+  const ta = el("textarea"); ta.value=datos; ta.readOnly=true; ta.style.marginTop="12px"; ta.style.minHeight="40vh";
+  caja.append(ta);
+  document.getElementById("hoja").hidden=false; document.body.style.overflow="hidden";
+}
+
+/* ---------- envío a SharePoint (opcional) ---------- */
+const CFG = window.RADAR_CONFIG || {};
+let msalApp = null, cuentaMS = null;
+
+function spConfigurado(){
+  return !!(CFG.clientId && CFG.tenantId && CFG.siteHost && CFG.sitePath && CFG.listName);
+}
+function guardarYSync(){ guardar(); }
+
+async function cargarMsal(){
+  if(window.msal) return window.msal;
+  await new Promise((ok, err)=>{
+    const sc = document.createElement("script");
+    sc.src = "https://cdn.jsdelivr.net/npm/@azure/msal-browser@5.26.0/lib/msal-browser.min.js";
+    sc.onload = ok;
+    sc.onerror = ()=>err(new Error("No se ha podido cargar el inicio de sesión de Microsoft. Comprueba la conexión."));
+    document.head.append(sc);
+  });
+  return window.msal;
+}
+async function iniciarMsal(){
+  if(!spConfigurado()) throw new Error("Falta configurar config.js con los datos de Entra y SharePoint.");
+  const M = await cargarMsal();
+  if(!msalApp){
+    msalApp = new M.PublicClientApplication({
+      auth:{ clientId:CFG.clientId,
+             authority:"https://login.microsoftonline.com/"+CFG.tenantId,
+             redirectUri: location.origin + location.pathname.replace(/index\.html$/i,"") },
+      cache:{ cacheLocation:"localStorage" }
+    });
+    if(msalApp.initialize) await msalApp.initialize();
+    const r = await msalApp.handleRedirectPromise();
+    if(r && r.account) msalApp.setActiveAccount(r.account);
+    const todas = msalApp.getAllAccounts();
+    if(todas.length && !msalApp.getActiveAccount()) msalApp.setActiveAccount(todas[0]);
+  }
+  cuentaMS = msalApp.getActiveAccount();
+  return msalApp;
+}
+function ambitos(){ return (CFG.scopes && CFG.scopes.length) ? CFG.scopes : ["Sites.ReadWrite.All"]; }
+async function entrarMS(){
+  await iniciarMsal();
+  if(cuentaMS) return cuentaMS;
+  await msalApp.loginRedirect({scopes:ambitos()});
+}
+async function salirMS(){
+  await iniciarMsal();
+  if(!cuentaMS) return;
+  await msalApp.logoutRedirect({account:cuentaMS});
+}
+async function tokenMS(){
+  await iniciarMsal();
+  if(!cuentaMS){ await msalApp.loginRedirect({scopes:ambitos()}); throw new Error("Hay que iniciar sesión."); }
+  try{
+    const r = await msalApp.acquireTokenSilent({scopes:ambitos(), account:cuentaMS});
+    return r.accessToken;
+  }catch(e){
+    await msalApp.acquireTokenRedirect({scopes:ambitos(), account:cuentaMS});
+    throw e;
+  }
+}
+async function graph(ruta, opciones){
+  const t = await tokenMS();
+  const cab = Object.assign({Authorization:"Bearer "+t, "Content-Type":"application/json"},
+                            (opciones && opciones.headers) || {});
+  const r = await fetch("https://graph.microsoft.com/v1.0"+ruta, Object.assign({}, opciones, {headers:cab}));
+  if(!r.ok){
+    const txt = (await r.text()).slice(0,300);
+    if(r.status===403) throw new Error("Tu cuenta no tiene permiso para escribir en esa lista.");
+    throw new Error("Microsoft Graph "+r.status+". "+txt);
+  }
+  return r.json();
+}
+let idsSitio = null;
+async function resolverLista(){
+  if(idsSitio) return idsSitio;
+  const sitio = await graph("/sites/"+CFG.siteHost+":"+CFG.sitePath);
+  const listas = await graph("/sites/"+sitio.id+"/lists?$select=id,displayName,name");
+  const l = listas.value.find(x=>x.displayName===CFG.listName || x.name===CFG.listName);
+  if(!l) throw new Error("No encuentro la lista «"+CFG.listName+"» en ese sitio.");
+  idsSitio = {sitio:sitio.id, lista:l.id};
+  return idsSitio;
+}
+function filaSP(a, d, v){
+  const f = {
+    Title: a.id + " · " + d.id,
+    ActividadId: a.id, Actividad: a.nombre, Fecha: a.fecha + "T00:00:00Z", Grupo: a.grupo, Categoria: a.categoria,
+    DeportistaId: d.id,
+    Observador: S.observador || "", Rol: S.rol || "",
+    RasgoDiferencial: v.rasgo || "", Especializacion: (v.esp||[]).join(" | "),
+    ComentarioTecnico: (v.com && v.com["TÉCNICO"]) || "",
+    ComentarioTactico: (v.com && v.com["TÁCTICO-DECISIONAL"]) || "",
+    ComentarioMindset: (v.com && v.com["MINDSET"]) || "",
+    Actualizado: new Date().toISOString(),
+    Payload: JSON.stringify({items:v.items, com:v.com||{}, rasgo:v.rasgo||"", esp:v.esp||[]})
+  };
+  if(CFG.enviarNombres !== false) f.Deportista = d.nombre;
+  for(let n=1;n<=20;n++) f["Nivel"+String(n).padStart(2,"0")] = v.items[n] || null;
+  return f;
+}
+async function enviarSharePoint(paso){
+  const a = act();
+  if(!a) throw new Error("No hay actividad cargada.");
+  if(a.ejemplo) throw new Error("La actividad de ejemplo no se envía. Carga una actividad real.");
+  if(!S.observador) throw new Error("Pon tu nombre en Ajustes antes de enviar.");
+  const ids = await resolverLista();
+  let n = 0, total = a.deportistas.filter(d=>{
+    const v=(S.val[a.id]||{})[d.id]; return v && Object.keys(v.items).length;
+  }).length;
+  if(!total) throw new Error("Todavía no has situado ningún ítem.");
+  for(const d of a.deportistas){
+    const v = (S.val[a.id]||{})[d.id];
+    if(!v || !Object.keys(v.items).length) continue;
+    await graph("/sites/"+ids.sitio+"/lists/"+ids.lista+"/items",
+                {method:"POST", body:JSON.stringify({fields:filaSP(a,d,v)})});
+    n++; if(paso) paso(n, total);
+  }
+  S.enviado = S.enviado || {};
+  S.enviado[a.id] = new Date().toISOString();
+  guardar();
+  return n;
+}
+function textoEstadoMS(){
+  if(!spConfigurado()) return "Envío a SharePoint: sin configurar. Las observaciones se guardan aquí y se entregan con el archivo.";
+  if(cuentaMS) return "Sesión iniciada como " + (cuentaMS.username || cuentaMS.name || "tu cuenta") + ".";
+  return "Sin sesión iniciada. Hará falta al enviar.";
+}
+function actualizarEstadoSync(){
+  const e = document.getElementById("estado-sync");
+  if(e) e.textContent = textoEstadoMS();
+}
+
+/* ---------- render ---------- */
+function pintar(){
+  const app = document.getElementById("app"); app.textContent="";
+  document.getElementById("pie").classList.add("oculto");
+  pintarBarra();
+  if(vista.n==="grupo") vistaGrupo(app);
+  else if(vista.n==="ficha") vistaFicha(app);
+  else if(vista.n==="preparar") vistaPreparar(app);
+  else if(vista.n==="ajustes") vistaAjustes(app);
+}
+document.getElementById("btn-preparar").addEventListener("click", ()=>{ vista={n:"preparar"}; pintar(); window.scrollTo(0,0); });
+document.getElementById("btn-ajustes").addEventListener("click", ()=>{ vista={n:"ajustes"}; pintar(); window.scrollTo(0,0); });
+document.getElementById("hoja").addEventListener("click", (ev)=>{ if(ev.target.closest("[data-cerrar]")) cerrarHoja(); });
+document.addEventListener("keydown", (ev)=>{ if(ev.key==="Escape") cerrarHoja(); });
+
+/* ---------- arranque ---------- */
+(async function(){
+  try{
+    const r = await fetch("items.json");
+    ITEMS = await r.json();
+  }catch(e){
+    document.getElementById("app").append(el("div","aviso","No se han podido cargar los 20 ítems del Radar. Vuelve a abrir la página."));
+    return;
+  }
+  asegurarEjemplo();
+  pintar();
+  if("serviceWorker" in navigator){
+    try{ await navigator.serviceWorker.register("sw.js"); }catch(e){}
+  }
+  if(spConfigurado()){
+    try{ await iniciarMsal(); actualizarEstadoSync(); pintar(); }catch(e){}
+  }
+})();
+</script>
+</body>
+</html>
