@@ -660,7 +660,7 @@ function vistaPreparar(app){
     const d = el("div");
     const l = el("label",null,lab); l.setAttribute("for","c-"+k); d.append(l);
     const i = el("input"); i.id="c-"+k; i.type = k==="fecha" ? "date":"text"; if(ph) i.placeholder=ph;
-    if(k==="fecha") i.value = new Date().toISOString().slice(0,10);
+    if(k==="fecha") i.value = new Date(Date.now() - new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);  // fecha local, no UTC
     campos[k]=i; d.append(i); g.append(d);
   });
   const drol = el("div");
@@ -677,8 +677,8 @@ function vistaPreparar(app){
   c2.append(el("p","ayuda","Genera un código por rol: el del seleccionador y el de su asistente son distintos, y así cada archivo llega firmado."));
 
   const l2 = el("label",null,"Deportistas"); l2.style.marginTop="14px"; l2.setAttribute("for","c-deps"); c2.append(l2);
-  c2.append(el("p","ayuda","Una por línea: ID y nombre separados por coma o tabulador. El ID es el que se mantiene entre convocatorias; es lo único que viaja a la base de datos."));
-  const tad = el("textarea"); tad.id="c-deps"; tad.placeholder="2011-0042, Nombre Apellido\n2011-0043, Nombre Apellido";
+  c2.append(el("p","ayuda","Una por línea: usuario de Kitman y nombre, separados por coma o tabulador. El usuario de Kitman (la columna KUserName del archivo de importación) es lo que permite llevar después los niveles a Kitman sin cruzar nada a mano."));
+  const tad = el("textarea"); tad.id="c-deps"; tad.placeholder="nombreusuario, Nombre Apellido\notrousuario, Nombre Apellido";
   c2.append(tad);
   const f2 = el("div","fila"); f2.style.marginTop="12px";
   const b2 = el("button","btn","Generar código"); b2.type="button";
@@ -755,7 +755,7 @@ function vistaAjustes(app){
   c1.append(i);
   const l2 = el("label",null,"Tu rol en este grupo"); l2.setAttribute("for","rol");
   l2.style.marginTop="14px"; c1.append(l2);
-  c1.append(el("p","ayuda","En caso de discrepancia prevalece el seleccionador. La regla se aplica al juntar los archivos, no aquí."));
+  c1.append(el("p","ayuda","Para Kitman se hace la media entre el seleccionador y su asistente. La media se calcula al juntar los envíos, no aquí."));
   const selRol = el("select"); selRol.id="rol";
   const vacia = el("option",null,"Sin indicar"); vacia.value=""; selRol.append(vacia);
   ROLES.forEach(r=>{ const o=el("option",null,r); o.value=r; selRol.append(o); });
@@ -787,6 +787,14 @@ function vistaAjustes(app){
     f.append(bs);
   }
   c2.append(f); s2.append(c2); app.append(s2);
+
+  const sk = el("section","seccion");
+  sk.append(el("h2",null,"Área de Alto Rendimiento"));
+  const ck = el("div","carta campo");
+  ck.append(el("p","ayuda","Junta los envíos de una actividad y prepara el archivo con el formato de importación de Kitman."));
+  const bk = el("button","btn sec","Preparar archivo para Kitman"); bk.type="button";
+  bk.addEventListener("click", ()=>{ vista={n:"kitman"}; pintar(); window.scrollTo(0,0); });
+  ck.append(bk); sk.append(ck); app.append(sk);
 
   const s3 = el("section","seccion");
   s3.append(el("h2",null,"Borrar"));
@@ -846,8 +854,10 @@ async function exportar(tipo){
   const base = "Radar_"+a.grupo.replace(/[^A-Za-z0-9]+/g,"-")+"_"+a.fecha;
   const datos = tipo==="csv" ? "﻿"+aCSV(filasCSV()) : JSON.stringify(paqueteJSON(), null, 1);
   const nombre = base + (tipo==="csv" ? ".csv" : ".json");
+  descargar(nombre, datos, tipo==="csv" ? "text/csv;charset=utf-8" : "application/json;charset=utf-8");
+}
+function descargar(nombre, datos, tipoMime){
   try{
-    const tipoMime = tipo==="csv" ? "text/csv;charset=utf-8" : "application/json;charset=utf-8";
     const url = URL.createObjectURL(new Blob([datos], {type:tipoMime}));
     const a2 = document.createElement("a"); a2.href=url; a2.download=nombre;
     document.body.append(a2); a2.click(); a2.remove();
@@ -937,10 +947,11 @@ async function graph(ruta, opciones){
   const t = await tokenMS();
   const cab = Object.assign({Authorization:"Bearer "+t, "Content-Type":"application/json"},
                             (opciones && opciones.headers) || {});
-  const r = await fetch("https://graph.microsoft.com/v1.0"+ruta, Object.assign({}, opciones, {headers:cab}));
+  const destino = /^https:\/\/graph\.microsoft\.com\//.test(ruta) ? ruta : "https://graph.microsoft.com/v1.0"+ruta;
+  const r = await fetch(destino, Object.assign({}, opciones, {headers:cab}));
   if(!r.ok){
     const txt = (await r.text()).slice(0,300);
-    if(r.status===403) throw new Error("Tu cuenta no tiene permiso para escribir en esa lista.");
+    if(r.status===403) throw new Error("Tu cuenta no tiene permiso en esa lista.");
     throw new Error("Microsoft Graph "+r.status+". "+txt);
   }
   return r.json();
@@ -1004,6 +1015,181 @@ function actualizarEstadoSync(){
   if(e) e.textContent = textoEstadoMS();
 }
 
+/* ---------- archivo para Kitman (Área de Alto Rendimiento) ----------
+   Formato del archivo de importación de Kitman: una fila por deportista, primera columna
+   KUserName (usuario de Kitman) y una columna por ítem con el sufijo « - Import».
+   Regla (César, 22/11/2026): media entre el seleccionador y su asistente. */
+const KITMAN = Object.assign({clave:"KUserName", sufijo:" - Import", roles:["Seleccionador","Asistente"]}, CFG.kitman || {});
+let kit = {regs:null, origen:"", act:null, msg:"", aviso:false, ocupado:false};
+
+function registrosLocales(){
+  const out = [];
+  Object.values(S.actividades).forEach(a=>{
+    if(a.ejemplo) return;
+    a.deportistas.forEach(d=>{
+      const v = (S.val[a.id]||{})[d.id];
+      if(!v || !Object.keys(v.items).length) return;
+      out.push({actividadId:a.id, actividad:a.nombre, fecha:a.fecha, grupo:a.grupo, deportistaId:d.id,
+                observador:S.observador||"", rol:S.rol||"", quien:"este-dispositivo",
+                actualizado:new Date().toISOString(), niveles:Object.assign({}, v.items)});
+    });
+  });
+  return out;
+}
+async function registrosLista(paso){
+  const ids = await resolverLista();
+  const campos = ["ActividadId","Actividad","Fecha","Grupo","DeportistaId","Observador","Rol","Actualizado"];
+  for(let n=1;n<=20;n++) campos.push("Nivel"+String(n).padStart(2,"0"));
+  let url = "/sites/"+ids.sitio+"/lists/"+ids.lista+"/items?$top=500&$expand=fields($select="+campos.join(",")+")";
+  const out = []; let paginas = 0;
+  while(url && paginas < 40){
+    const r = await graph(url); paginas++;
+    (r.value||[]).forEach(x=>{
+      const f = x.fields || {};
+      if(!f.ActividadId || !f.DeportistaId) return;
+      const niveles = {};
+      for(let n=1;n<=20;n++){ const v = Number(f["Nivel"+String(n).padStart(2,"0")]); if(v>=1 && v<=4 && Number.isInteger(v)) niveles[n]=v; }
+      const autor = x.createdBy && x.createdBy.user ? (x.createdBy.user.email || x.createdBy.user.id || "") : "";
+      out.push({actividadId:String(f.ActividadId), actividad:f.Actividad||"", fecha:String(f.Fecha||"").slice(0,10), grupo:f.Grupo||"",
+                deportistaId:String(f.DeportistaId).trim(), observador:f.Observador||"", rol:f.Rol||"",
+                quien:(autor || f.Observador || "sin-nombre").toLowerCase(),
+                actualizado:f.Actualizado || x.lastModifiedDateTime || "", niveles});
+    });
+    url = r["@odata.nextLink"] || null;
+    if(paso) paso(out.length);
+  }
+  return out;
+}
+function actividadesDe(regs){
+  const m = new Map();
+  regs.forEach(r=>{
+    const a = m.get(r.actividadId) || {id:r.actividadId, nombre:r.actividad, fecha:r.fecha, grupo:r.grupo, n:0};
+    a.n++; m.set(r.actividadId, a);
+  });
+  return [...m.values()].sort((a,b)=> a.fecha<b.fecha ? 1 : a.fecha>b.fecha ? -1 : 0);
+}
+function archivoKitman(regs, actividadId){
+  /* 1) de cada observador, su envío más reciente por deportista */
+  const ultimo = new Map();
+  regs.filter(r=>r.actividadId===actividadId).forEach(r=>{
+    const k = r.deportistaId+"\u0001"+r.quien, p = ultimo.get(k);
+    if(!p || String(r.actualizado) > String(p.actualizado)) ultimo.set(k, r);
+  });
+  const todos = [...ultimo.values()];
+  const dentro = todos.filter(r=>KITMAN.roles.includes(r.rol));
+  const fuera  = todos.filter(r=>!KITMAN.roles.includes(r.rol));
+  const observadores = lista=>{
+    const m = new Map();
+    lista.forEach(r=>{ const o = m.get(r.quien) || {nombre:r.observador||r.quien, rol:r.rol||"Sin indicar", n:0}; o.n++; m.set(r.quien, o); });
+    return [...m.values()];
+  };
+  /* 2) columnas con el nombre de Kitman, en el mismo orden que su archivo */
+  const cols = ITEMS.map(it=>({n:it.n, item:it.nombre, cab:(it.kitman||it.nombre)+KITMAN.sufijo}))
+                    .sort((a,b)=> a.cab<b.cab ? -1 : a.cab>b.cab ? 1 : 0);
+  const porDep = new Map();
+  dentro.forEach(r=>{ if(!porDep.has(r.deportistaId)) porDep.set(r.deportistaId, []); porDep.get(r.deportistaId).push(r); });
+  /* 3) media por deportista e ítem; el ítem que nadie ha situado queda en blanco */
+  const filas = [[KITMAN.clave].concat(cols.map(c=>c.cab))];
+  let medias = 0, blancos = 0; const lejos = [];
+  [...porDep.keys()].sort().forEach(id=>{
+    const rs = porDep.get(id);
+    filas.push([id].concat(cols.map(c=>{
+      const vs = rs.map(r=>r.niveles[c.n]).filter(v=>v>=1 && v<=4);
+      if(!vs.length){ blancos++; return ""; }
+      const m = vs.reduce((x,y)=>x+y, 0) / vs.length;
+      if(!Number.isInteger(m)) medias++;
+      if(Math.max.apply(null,vs) - Math.min.apply(null,vs) >= 2) lejos.push({id, item:c.item, valores:vs.join(" y ")});
+      return String(Math.round(m*100)/100);
+    })));
+  });
+  const raros = [...porDep.keys()].filter(id=>!/^[a-z0-9._-]+$/.test(id));
+  return {filas, deportistas:porDep.size, dentro:observadores(dentro), fuera:observadores(fuera), medias, blancos, lejos, raros};
+}
+function csvKitman(filas){
+  return filas.map(f=>f.map(c=>{
+    const s = String(c==null?"":c);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(",")).join("\n") + "\n";
+}
+function vistaKitman(app){
+  const volver = el("button","volver","‹ Volver"); volver.type="button";
+  volver.addEventListener("click", ()=>{ vista={n:"ajustes"}; pintar(); });
+  app.append(volver);
+  const top = el("div","ficha-top"); top.append(el("h1",null,"Archivo para Kitman")); app.append(top);
+
+  const s1 = el("section","seccion");
+  s1.append(el("h2",null,"De dónde salen los datos"));
+  const c1 = el("div","carta campo");
+  c1.append(el("p","nota","La lista de SharePoint reúne los envíos de todos los técnicos. Con una cuenta propietaria del sitio se ven todos; con cualquier otra, solo los propios."));
+  const f1 = el("div","fila"); f1.style.marginTop="12px";
+  const estado = el("p","nota", kit.msg); estado.style.marginTop="10px";
+  if(kit.aviso) estado.style.color="var(--aviso)";
+  if(spConfigurado()){
+    const bL = el("button","btn","Leer la lista de SharePoint"); bL.type="button"; bL.disabled = kit.ocupado;
+    bL.addEventListener("click", async ()=>{
+      if(!cuentaMS){ kit.msg="Inicia sesión con Microsoft en Ajustes y vuelve aquí."; kit.aviso=true; pintar(); return; }
+      kit.ocupado=true; kit.aviso=false; kit.msg="Leyendo la lista…"; pintar();
+      try{
+        const regs = await registrosLista();
+        kit.regs=regs; kit.origen="lista"; kit.act=null;
+        kit.msg = regs.length ? regs.length+" envíos leídos de la lista." : "La lista está vacía, o tu cuenta no ve ningún envío.";
+        kit.aviso = !regs.length;
+      }catch(e){ kit.msg = e.message; kit.aviso=true; }
+      kit.ocupado=false; pintar();
+    });
+    f1.append(bL);
+  }
+  const bD = el("button","btn sec","Usar lo que hay en este dispositivo"); bD.type="button"; bD.disabled = kit.ocupado;
+  bD.addEventListener("click", ()=>{
+    const regs = registrosLocales();
+    kit.regs=regs; kit.origen="dispositivo"; kit.act=null;
+    kit.msg = regs.length ? "Solo lo observado en este dispositivo: un único observador, sin media." : "En este dispositivo no hay ítems situados en ninguna actividad real.";
+    kit.aviso = !regs.length; pintar();
+  });
+  f1.append(bD); c1.append(f1, estado); s1.append(c1); app.append(s1);
+
+  if(!kit.regs || !kit.regs.length) return;
+  const acts = actividadesDe(kit.regs);
+  if(!kit.act || !acts.some(a=>a.id===kit.act)) kit.act = acts[0].id;
+
+  const s2 = el("section","seccion");
+  s2.append(el("h2",null,"Actividad"));
+  const c2 = el("div","carta campo");
+  const lab = el("label",null,"Qué actividad llevas a Kitman"); lab.setAttribute("for","k-act"); c2.append(lab);
+  const sel = el("select"); sel.id="k-act";
+  acts.forEach(a=>{ const o = el("option",null,[a.grupo, a.nombre, a.fecha].filter(Boolean).join(" · ")); o.value=a.id; sel.append(o); });
+  sel.value = kit.act;
+  sel.addEventListener("change", ()=>{ kit.act=sel.value; pintar(); });
+  c2.append(sel); s2.append(c2); app.append(s2);
+
+  const r = archivoKitman(kit.regs, kit.act);
+  const a = acts.find(x=>x.id===kit.act);
+  const s3 = el("section","seccion");
+  s3.append(el("h2",null,"Qué va en el archivo"));
+  const c3 = el("div","carta campo");
+  const linea = (txt, aviso)=>{ const p = el("p","nota",txt); p.style.marginTop="6px"; if(aviso) p.style.color="var(--aviso)"; c3.append(p); };
+  const nombres = lista=>lista.map(o=>o.nombre+" ("+o.rol+", "+o.n+")").join(" · ");
+  linea(r.deportistas+" deportistas, 20 ítems. Los ítems sin situar quedan en blanco: "+r.blancos+" casillas.");
+  if(r.dentro.length) linea("Entran en la media: "+nombres(r.dentro)+".");
+  else linea("Ningún envío de esta actividad viene de un seleccionador o un asistente: el archivo saldría vacío. Revisa el rol en Ajustes.", true);
+  if(r.fuera.length) linea("No entran, por su rol: "+nombres(r.fuera)+".", true);
+  if(r.medias) linea(r.medias+" casillas llevan una media con decimales (por ejemplo 2.5), porque los dos observadores no coinciden.");
+  if(r.lejos.length){
+    linea("Dos o más niveles de diferencia entre observadores en "+r.lejos.length+" casillas. Conviene hablarlo antes de importar, porque la media lo tapa:", true);
+    r.lejos.slice(0,12).forEach(x=>linea("· "+x.id+" · "+x.item+": "+x.valores));
+    if(r.lejos.length>12) linea("· … y "+(r.lejos.length-12)+" más.");
+  }
+  if(r.raros.length) linea("No parecen usuarios de Kitman (llevan mayúsculas, espacios o acentos): "+r.raros.slice(0,8).join(", ")+(r.raros.length>8?"…":"")+". Kitman no los reconocerá.", true);
+  linea("La fecha no va en el archivo: se indica en Kitman al importar.");
+  const f3 = el("div","fila"); f3.style.marginTop="12px";
+  const bG = el("button","btn","Descargar archivo para Kitman"); bG.type="button"; bG.disabled = !r.deportistas;
+  bG.addEventListener("click", ()=>{
+    const nombre = "IMPORT_Radar_"+String(a.grupo||a.id).replace(/[^A-Za-z0-9]+/g,"-")+"_"+(a.fecha||"")+".csv";
+    descargar(nombre, csvKitman(r.filas), "text/csv;charset=utf-8");
+  });
+  f3.append(bG); c3.append(f3); s3.append(c3); app.append(s3);
+}
+
 /* ---------- render ---------- */
 function pintar(){
   const app = document.getElementById("app"); app.textContent="";
@@ -1013,6 +1199,7 @@ function pintar(){
   else if(vista.n==="ficha") vistaFicha(app);
   else if(vista.n==="preparar") vistaPreparar(app);
   else if(vista.n==="ajustes") vistaAjustes(app);
+  else if(vista.n==="kitman") vistaKitman(app);
 }
 document.getElementById("btn-preparar").addEventListener("click", ()=>{ vista={n:"preparar"}; pintar(); window.scrollTo(0,0); });
 document.getElementById("btn-ajustes").addEventListener("click", ()=>{ vista={n:"ajustes"}; pintar(); window.scrollTo(0,0); });

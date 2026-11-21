@@ -77,6 +77,18 @@ Cada envío **añade filas nuevas**, no sobrescribe: el Área de Alto Rendimient
 
 Si no quieres nombres de deportistas en la lista, pon `enviarNombres: false` y solo viajará el ID.
 
+## Archivo para Kitman
+
+En **Ajustes › Área de Alto Rendimiento › Preparar archivo para Kitman**. Genera un CSV con el formato del archivo de importación de Kitman: una fila por deportista, primera columna `KUserName` (el usuario de Kitman) y una columna por ítem con el sufijo ` - Import`, separado por comas.
+
+- **El ID del deportista al preparar la actividad tiene que ser su usuario de Kitman.** Es lo que casa cada fila con su perfil.
+- **Regla:** media entre el seleccionador y su asistente. De cada observador se toma su envío más reciente por deportista. Los envíos con otro rol, o sin rol, no entran y la pantalla lo avisa.
+- Un ítem que nadie ha situado queda en blanco. Si los observadores no coinciden, la casilla lleva decimales (2.5).
+- La pantalla avisa de las casillas con dos o más niveles de diferencia entre observadores, porque la media lo tapa.
+- La fecha no va en el archivo: se indica en Kitman al importar.
+- El nombre de cada columna sale del campo `kitman` de `items.json`; el sufijo, la columna clave y los roles, de `kitman` en `config.js`.
+- Dos orígenes: la lista de SharePoint (hace falta una cuenta propietaria del sitio para ver los envíos de todos) o lo que hay en el propio dispositivo (un solo observador, sin media).
+
 ## Fuentes corporativas
 
 `fonts/` lleva REDSTICK, Config Alt Black y Config Alt Text. **Si el repositorio es público, comprueba antes la licencia**: publicarlas en Pages las deja descargables por cualquiera. Si la licencia no lo permite, borra los tres archivos y la app cae sola a una tipografía de sustitución sin romper nada.
@@ -84,4 +96,4 @@ Si no quieres nombres de deportistas en la lista, pon `enviarNombres: false` y s
 ## Pendiente
 
 - Variante de porteros y porteras: comparten escala y Mindset, pero sus ítems de técnico y táctico son propios y esa guía aún no está escrita.
-- Mapeo al formato de importación de Kitman Labs: tabla de equivalencias `Nivel01`…`Nivel20` → nombres de Kitman, y confirmar con qué identificador casa Kitman a los deportistas antes de la primera actividad real.
+- Lectura de la lista desde «Preparar archivo para Kitman»: escrita pero sin probar contra SharePoint hasta que llegue el consentimiento de administrador en Entra.

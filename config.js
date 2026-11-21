@@ -8,5 +8,7 @@ window.RADAR_CONFIG = {
   sitePath: "/sites/HockeyEspanaAR-Datos",
   listName: "RadarObservacion",       // nombre interno de la lista «Radar · Observación»
   scopes: ["Sites.ReadWrite.All"],    // permiso delegado: cada uno escribe lo que SharePoint le permita
-  enviarNombres: true                 // false = solo ID de deportista en la lista
+  enviarNombres: true,                // false = solo ID de deportista en la lista
+  // Archivo para Kitman: columna clave, sufijo de las columnas y roles que entran en la media
+  kitman: { clave: "KUserName", sufijo: " - Import", roles: ["Seleccionador", "Asistente"] }
 };
