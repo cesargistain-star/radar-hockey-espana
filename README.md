@@ -77,6 +77,12 @@ Cada envío **añade filas nuevas**, no sobrescribe: el Área de Alto Rendimient
 
 Si no quieres nombres de deportistas en la lista, pon `enviarNombres: false` y solo viajará el ID.
 
+## Instalación en el móvil
+
+Al abrir el enlace en el navegador de un móvil, la app muestra un aviso para instalarla: en Android, un botón «Instalar»; en iPhone, los pasos de Safari (compartir › Añadir a pantalla de inicio), porque Apple no permite el botón. En el ordenador no aparece.
+
+En iPhone la app del icono y Safari guardan sus datos por separado: tras instalar hay que abrirla una vez desde el icono con conexión y cargar ahí la actividad. En esa primera apertura la app confirma cuándo está lista para trabajar sin cobertura.
+
 ## Archivo para Kitman
 
 En **Ajustes › Área de Alto Rendimiento › Preparar archivo para Kitman**. Genera un CSV con el formato del archivo de importación de Kitman: una fila por deportista, primera columna `KUserName` (el usuario de Kitman) y una columna por ítem con el sufijo ` - Import`, separado por comas.

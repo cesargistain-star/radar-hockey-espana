@@ -160,6 +160,12 @@ textarea{min-height:92px;resize:vertical;line-height:1.5}
 .chip-sel{border:1px solid var(--linea);background:var(--papel);border-radius:999px;padding:6px 12px;font-size:13px;
   font-weight:600;color:var(--tinta-suave)}
 .chip-sel[aria-pressed="true"]{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.instalar{padding:14px 16px;margin-bottom:16px;border-left:4px solid var(--rojo)}
+.instalar h3{font-size:16px;margin:0 0 4px}
+.instalar ol{margin:10px 0 0;padding-left:22px}
+.instalar li{margin:7px 0;line-height:1.4}
+.instalar svg{width:18px;height:18px;vertical-align:-3px;margin:0 2px}
+.instalar .fila{margin-top:12px}
 .btn{background:var(--rojo);color:#fff;border:0;border-radius:8px;padding:12px 18px;font-weight:700;font-size:15px;white-space:nowrap}
 .btn:hover{background:var(--rojo-hover)}
 .btn.sec{background:none;color:var(--tinta);border:1px solid var(--linea)}
@@ -325,6 +331,7 @@ function vistaGrupo(app){
   const h = el("div","ficha-top");
   const t = el("h1", null, a ? a.grupo : "Radar de Desarrollo");
   h.append(t); app.append(h);
+  const ins = avisoInstalar(); if(ins) app.append(ins);
   if(!a){
     const c = el("div","carta vacio");
     c.append(el("p",null,"No hay ninguna actividad en este dispositivo. Pide al Área de Alto Rendimiento el código de la actividad y pégalo en Actividad."));
@@ -1015,6 +1022,81 @@ function actualizarEstadoSync(){
   if(e) e.textContent = textoEstadoMS();
 }
 
+/* ---------- instalación en el móvil ----------
+   Aparece solo cuando se abre en el navegador de un móvil sin estar instalada.
+   Android: botón de instalar. iPhone: Apple no lo permite, así que se muestran los pasos. */
+const UA = navigator.userAgent || "";
+const ES_IOS = /iPad|iPhone|iPod/.test(UA) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const ES_ANDROID = /Android/i.test(UA);
+const CLAVE_LISTA = "radar-he-lista";
+let promptInstalar = null, instalarOculto = false, avisarLista = false;
+function instalada(){
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+}
+window.addEventListener("beforeinstallprompt", ev=>{ ev.preventDefault(); promptInstalar = ev; if(vista.n==="grupo") pintar(); });
+window.addEventListener("appinstalled", ()=>{ promptInstalar = null; instalarOculto = true; if(vista.n==="grupo") pintar(); });
+
+function avisoInstalar(){
+  const c = el("div","carta instalar");
+  if(instalada()){
+    if(!avisarLista) return null;
+    c.style.borderLeftColor = "var(--ok)";
+    c.append(el("h3",null,"Instalada"));
+    c.append(el("p","nota","Ya funciona sin cobertura. Entra siempre desde este icono: lo que anotes se guarda aquí."));
+    const f = el("div","fila");
+    const b = el("button","btn sec","Entendido"); b.type="button";
+    b.addEventListener("click", ()=>{ avisarLista=false; try{ localStorage.setItem(CLAVE_LISTA,"1"); }catch(e){} pintar(); });
+    f.append(b); c.append(f); return c;
+  }
+  if(instalarOculto || !(ES_IOS || ES_ANDROID)) return null;
+  c.append(el("h3",null,"Instala la app en tu móvil"));
+  c.append(el("p","nota","Se abre desde un icono, funciona sin cobertura y no pierde lo que vas anotando."));
+  const f = el("div","fila");
+  const paso = (ol, txt)=>{ const li = el("li",null,txt); ol.append(li); return li; };
+  if(ES_IOS){
+    const ol = el("ol");
+    const li1 = el("li"); li1.append("Pulsa el botón de compartir ");
+    const ico = el("span"); ico.setAttribute("aria-hidden","true");
+    ico.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>';
+    li1.append(ico, " de Safari."); ol.append(li1);
+    paso(ol, "Baja en el menú y elige «Añadir a pantalla de inicio».");
+    paso(ol, "Pulsa «Añadir».");
+    paso(ol, "Abre la app desde el icono nuevo, con conexión, y carga ahí tu actividad.");
+    c.append(ol);
+    const n = el("p","nota","Si no ves esa opción, abre este enlace en Safari."); n.style.marginTop="8px"; c.append(n);
+  }else if(promptInstalar){
+    const b = el("button","btn","Instalar"); b.type="button";
+    b.addEventListener("click", async ()=>{
+      const p = promptInstalar; if(!p) return;
+      try{ p.prompt(); await p.userChoice; }catch(e){}
+      promptInstalar = null; pintar();
+    });
+    f.append(b);
+    const n = el("p","nota","Después ábrela desde el icono nuevo, con conexión, y carga ahí tu actividad."); n.style.marginTop="8px"; c.append(n);
+  }else{
+    const ol = el("ol");
+    paso(ol, "Pulsa el menú ⋮ del navegador.");
+    paso(ol, "Elige «Instalar aplicación» o «Añadir a pantalla de inicio».");
+    paso(ol, "Abre la app desde el icono nuevo, con conexión, y carga ahí tu actividad.");
+    c.append(ol);
+  }
+  const no = el("button","btn sec","Ahora no"); no.type="button";
+  no.addEventListener("click", ()=>{ instalarOculto = true; pintar(); });
+  f.append(no); c.append(f);
+  return c;
+}
+async function comprobarLista(){
+  /* primera apertura desde el icono: avisa cuando ya está todo guardado para trabajar sin red */
+  try{
+    if(!instalada() || !("serviceWorker" in navigator) || localStorage.getItem(CLAVE_LISTA)) return;
+    await navigator.serviceWorker.ready;
+    for(let i=0;i<20;i++){
+      if(await caches.match("./items.json")){ avisarLista = true; if(vista.n==="grupo") pintar(); return; }
+      await new Promise(r=>setTimeout(r, 700));
+    }
+  }catch(e){}
+}
+
 /* ---------- archivo para Kitman (Área de Alto Rendimiento) ----------
    Formato del archivo de importación de Kitman: una fila por deportista, primera columna
    KUserName (usuario de Kitman) y una columna por ítem con el sufijo « - Import».
@@ -1219,6 +1301,7 @@ document.addEventListener("keydown", (ev)=>{ if(ev.key==="Escape") cerrarHoja();
   pintar();
   if("serviceWorker" in navigator){
     try{ await navigator.serviceWorker.register("sw.js"); }catch(e){}
+    comprobarLista();
   }
   if(spConfigurado()){
     try{ await iniciarMsal(); actualizarEstadoSync(); pintar(); }catch(e){}
