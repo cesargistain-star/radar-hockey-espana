@@ -90,7 +90,7 @@ Kitman no deja exportar la lista de deportistas de un grupo, pero el usuario se 
 - Admite tabla con tabuladores, separada por comas o punto y coma, y el caso en que cada casilla queda en una línea.
 - Comprueba que cada usuario se parece a su nombre y marca «revisa» los que no, para detectar filas descolocadas.
 - Todo ocurre en el dispositivo. Si lo pegado no se entiende, el botón «Copiar la forma de lo pegado (sin nombres)» da un texto con la estructura y ninguna letra real, para pedir soporte.
-- Sin probar todavía con una copia real de la pantalla de Kitman.
+- Formato real de Kitman (visto el 23/11/2026 por su forma, sin nombres): cada deportista ocupa varias líneas; el nombre va solo en una línea y debajo, con tabuladores, el usuario, la posición, el equipo y la fecha de creación; después, las etiquetas. La app lo lee como registros y no muestra selectores de columna.
 
 ## Archivo para Kitman
 

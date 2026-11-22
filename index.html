@@ -813,11 +813,40 @@ function columnasK(filas){
   }
   return {colU, colN, colP, aciertos, n};
 }
+function porRegistros(lineas){
+  /* Así copia Kitman su lista: cada deportista ocupa varias líneas. El nombre va solo en una línea
+     y debajo, separados por tabuladores, el usuario, la posición, el equipo y la fecha; después, las etiquetas. */
+  const veces = {};
+  lineas.forEach(l=>l.split("\t").forEach(c=>{ c = c.trim(); if(c) veces[c] = (veces[c]||0)+1; }));
+  const filas = []; let aciertos = 0;
+  lineas.forEach((l,i)=>{
+    if(!l.includes("\t")) return;
+    const celdas = l.split("\t").map(c=>c.trim());
+    const u = celdas.find(c=>esUsuarioK(c) && veces[c]===1);
+    if(!u) return;
+    const antes = [];
+    for(let k=i-1; k>=0 && k>=i-4; k--){
+      if(lineas[k].includes("\t")) break;
+      const t = lineas[k].trim(); if(t.length > 1) antes.push(t);
+    }
+    const otras = celdas.filter(c=>c && c!==u);
+    const pareceNombre = c=>/[A-Za-zÀ-ÿ]{2,}\s+[A-Za-zÀ-ÿ]{2,}/.test(c) && !/[0-9]/.test(c);
+    let nombre = antes.find(c=>casan(u,c)) || otras.find(c=>casan(u,c) && pareceNombre(c));
+    if(nombre) aciertos++;
+    else nombre = antes.find(pareceNombre) || otras.find(pareceNombre) || "";
+    filas.push([u, nombre]);
+  });
+  return {filas, colU: filas.length ? 0 : -1, colN: filas.some(f=>f[1]) ? 1 : -1, colP:-1, n:2, aciertos, registros:true};
+}
 function leerPegado(txt){
   const lineas = String(txt).replace(/\r/g,"").split("\n").map(l=>l.replace(/\u00a0/g," "));
   if(lineas.some(l=>l.includes("\t"))){
     const filas = lineas.filter(l=>l.trim()).map(l=>l.split("\t").map(c=>c.trim()));
-    return Object.assign({filas}, columnasK(filas));
+    const tabla = Object.assign({filas}, columnasK(filas));
+    const reg = porRegistros(lineas);
+    const vale = r=>r.colU >= 0 && r.colN >= 0;
+    if(vale(reg) && (!vale(tabla) || reg.aciertos > tabla.aciertos)) return reg;
+    return tabla;
   }
   /* sin tabuladores: o va separado por comas / punto y coma, o cada casilla ha quedado en una línea */
   const celdas = lineas.map(l=>l.trim()).filter(Boolean);
@@ -897,7 +926,7 @@ function lecturaKitman(res, txt, t, col, marcas, destino){
   };
   const g = el("div","fila-2"); g.style.marginTop = "12px";
   g.append(elegir("Usuario de Kitman","u"), elegir("Nombre","n"), elegir("¿El nombre de pila va en otra columna?","p",true));
-  res.append(g);
+  if(!t.registros) res.append(g);
 
   const vistos = new Set();
   const filas = t.filas.map(f=>{
