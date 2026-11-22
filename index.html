@@ -166,6 +166,14 @@ textarea{min-height:92px;resize:vertical;line-height:1.5}
 .instalar li{margin:7px 0;line-height:1.4}
 .instalar svg{width:18px;height:18px;vertical-align:-3px;margin:0 2px}
 .instalar .fila{margin-top:12px}
+.kpanel{margin:12px 0 0;padding:12px;border:1px solid var(--linea);border-radius:8px;background:var(--carta-2)}
+.kpanel label{margin-top:0}
+.kfila{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--linea);font-size:14px}
+.campo label.kfila{display:flex;font-size:14px;text-transform:none;letter-spacing:0;font-weight:400;color:var(--tinta);margin:0}
+.kfila span{flex:1}
+.kfila input{width:20px;height:20px;flex:none;margin-top:1px}
+.kfila small{display:block;color:var(--tinta-suave)}
+.kfila .ojo{color:var(--aviso)}
 .btn{background:var(--rojo);color:#fff;border:0;border-radius:8px;padding:12px 18px;font-weight:700;font-size:15px;white-space:nowrap}
 .btn:hover{background:var(--rojo-hover)}
 .btn.sec{background:none;color:var(--tinta);border:1px solid var(--linea)}
@@ -687,6 +695,13 @@ function vistaPreparar(app){
   c2.append(el("p","ayuda","Una por línea: usuario de Kitman y nombre, separados por coma o tabulador. El usuario de Kitman (la columna KUserName del archivo de importación) es lo que permite llevar después los niveles a Kitman sin cruzar nada a mano."));
   const tad = el("textarea"); tad.id="c-deps"; tad.placeholder="nombreusuario, Nombre Apellido\notrousuario, Nombre Apellido";
   c2.append(tad);
+  const bPeg = el("button","btn sec","Pegar la lista copiada de Kitman"); bPeg.type="button"; bPeg.style.marginTop="10px";
+  const panelK = el("div","kpanel oculto");
+  bPeg.addEventListener("click", ()=>{
+    panelK.classList.toggle("oculto");
+    if(!panelK.childNodes.length) panelKitman(panelK, tad);
+  });
+  c2.append(bPeg, panelK);
   const f2 = el("div","fila"); f2.style.marginTop="12px";
   const b2 = el("button","btn","Generar código"); b2.type="button";
   const msg2 = el("span","nota","");
@@ -743,6 +758,186 @@ function vistaPreparar(app){
     });
     s3.append(c3); app.append(s3);
   }
+}
+
+/* ---------- lista pegada desde la pantalla de Kitman ----------
+   Kitman no deja exportar la lista de deportistas, pero el usuario se ve en pantalla.
+   Se copia la tabla, se pega aquí y la app localiza qué columna es el usuario y cuál el nombre.
+   Todo ocurre en el dispositivo. */
+function esUsuarioK(s){ return /^[a-z0-9][a-z0-9._-]{2,}$/.test(s) && /[a-z]/.test(s); }
+function sinAcentos(s){ return String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+function casan(usuario, nombre){
+  /* el usuario de Kitman se forma con el nombre: sirve para comprobar que cada usuario va con su deportista */
+  const u = sinAcentos(usuario).replace(/[^a-z]/g,"");
+  return sinAcentos(nombre).split(/[^a-z]+/).filter(t=>t.length>=3).some(t=>u.includes(t));
+}
+function columnasK(filas){
+  const n = Math.max.apply(null, filas.map(f=>f.length).concat([0]));
+  let colU = -1, mejor = 0;
+  for(let c=0;c<n;c++){
+    const vals = filas.map(f=>f[c]||"").filter(Boolean);
+    const ok = vals.filter(esUsuarioK);
+    if(ok.length < 2 || new Set(ok).size < ok.length*0.9) continue;
+    const nota = ok.length / filas.length + ok.join("").length / (ok.length*1000);
+    if(ok.length >= filas.length*0.5 && nota > mejor){ mejor = nota; colU = c; }
+  }
+  let colN = -1, colP = -1, aciertos = 0;
+  if(colU >= 0){
+    const buenas = filas.filter(f=>esUsuarioK(f[colU]||""));
+    for(let c=0;c<n;c++){
+      if(c===colU) continue;
+      const k = buenas.filter(f=>casan(f[colU], f[c]||"")).length;
+      if(k > aciertos){ aciertos = k; colN = c; }
+    }
+    if(colN < 0){
+      /* ningún nombre casa con su usuario: se toma la columna que más parece de nombres y se avisará fila a fila */
+      let top = 0;
+      for(let c=0;c<n;c++){
+        if(c===colU) continue;
+        const k = buenas.filter(f=>{ const v = (f[c]||"").trim(); return /[A-Za-zÀ-ÿ]{2,}/.test(v) && !esUsuarioK(v); }).length;
+        if(k > top){ top = k; colN = c; }
+      }
+    }
+    if(colN >= 0){
+      /* ¿el nombre de pila va en otra columna? su inicial coincide con la del usuario y no está ya en el nombre */
+      let top = 0;
+      for(let c=0;c<n;c++){
+        if(c===colU || c===colN) continue;
+        const k = buenas.filter(f=>{
+          const v = sinAcentos(f[c]||"").trim();
+          return /^[a-z]{2,}/.test(v) && v[0]===f[colU][0] && !sinAcentos(f[colN]||"").includes(v);
+        }).length;
+        if(k >= buenas.length*0.8 && k > top){ top = k; colP = c; }
+      }
+    }
+  }
+  return {colU, colN, colP, aciertos, n};
+}
+function leerPegado(txt){
+  const lineas = String(txt).replace(/\r/g,"").split("\n").map(l=>l.replace(/\u00a0/g," "));
+  if(lineas.some(l=>l.includes("\t"))){
+    const filas = lineas.filter(l=>l.trim()).map(l=>l.split("\t").map(c=>c.trim()));
+    return Object.assign({filas}, columnasK(filas));
+  }
+  /* sin tabuladores: o va separado por comas / punto y coma, o cada casilla ha quedado en una línea */
+  const celdas = lineas.map(l=>l.trim()).filter(Boolean);
+  const conSep = celdas.filter(l=>/[;,]/.test(l)).length;
+  if(conSep >= celdas.length*0.7){
+    const sep = celdas.filter(l=>l.includes(";")).length >= conSep*0.7 ? ";" : ",";
+    const filas = celdas.map(l=>l.split(sep).map(c=>c.trim()));
+    const r = Object.assign({filas}, columnasK(filas));
+    if(r.colU >= 0) return r;
+  }
+  /* un usuario no se repite; palabras como «active» sí, y no deben confundir */
+  const veces = {}; celdas.forEach(c=>{ veces[c] = (veces[c]||0)+1; });
+  const pos = celdas.map((c,i)=>(esUsuarioK(c) && veces[c]===1)?i:-1).filter(i=>i>=0);
+  if(pos.length >= 3){
+    const saltos = pos.slice(1).map((v,i)=>v-pos[i]);
+    const cuenta = {}; saltos.forEach(x=>{ cuenta[x] = (cuenta[x]||0)+1; });
+    const orden = Object.keys(cuenta).map(Number).sort((a,b)=>cuenta[b]-cuenta[a]);
+    const p = orden[0];
+    if(p > 1 && cuenta[p] >= saltos.length*0.8){
+      /* se prueba cada forma de cortar las filas y se queda la que mejor casa usuario y nombre */
+      let mejorR = null;
+      for(let ini=0; ini<p; ini++){
+        const filas = [];
+        for(let i=ini; i<celdas.length; i+=p) filas.push(celdas.slice(i, i+p));
+        const r = Object.assign({filas}, columnasK(filas));
+        if(r.colU >= 0 && (!mejorR || r.aciertos > mejorR.aciertos)) mejorR = r;
+      }
+      if(mejorR) return mejorR;
+    }
+  }
+  const filas = celdas.map(l=>[l]);
+  return Object.assign({filas}, columnasK(filas));
+}
+function formaDe(txt){
+  /* la forma de lo pegado, sin una sola letra real: sirve para pedir ayuda sin enseñar nombres */
+  return String(txt).replace(/\r/g,"").split("\n").slice(0,16).map(l=>
+    l.replace(/\t/g," ⇥ ").replace(/[a-zñáéíóúüç]/g,"x").replace(/[A-ZÑÁÉÍÓÚÜÇ]/g,"X").replace(/[0-9]/g,"9")).join("\n");
+}
+function panelKitman(panel, destino){
+  panel.textContent = "";
+  panel.append(el("p","ayuda","En Kitman, abre la lista de deportistas del grupo, selecciónala con el ratón de modo que se vean el nombre y el usuario, cópiala y pégala aquí. Lo que pegas no sale de este dispositivo."));
+  const ta = el("textarea"); ta.placeholder = "Pega aquí lo copiado de Kitman"; ta.style.minHeight = "110px"; panel.append(ta);
+  const f = el("div","fila"); f.style.marginTop = "8px";
+  const bLeer = el("button","btn","Leer la lista"); bLeer.type = "button"; f.append(bLeer); panel.append(f);
+  const res = el("div"); panel.append(res);
+  bLeer.addEventListener("click", ()=>{
+    const t = leerPegado(ta.value);
+    lecturaKitman(res, ta.value, t, {u:t.colU, n:t.colN, p:t.colP}, null, destino);
+  });
+}
+function lecturaKitman(res, txt, t, col, marcas, destino){
+  res.textContent = "";
+  const nota = (texto, aviso)=>{ const p = el("p","nota",texto); p.style.marginTop = "10px"; if(aviso) p.style.color = "var(--aviso)"; res.append(p); return p; };
+  const ayudaForma = ()=>{
+    const b = el("button","btn sec","Copiar la forma de lo pegado (sin nombres)"); b.type = "button"; b.style.marginTop = "8px";
+    b.addEventListener("click", async ()=>{
+      try{ await navigator.clipboard.writeText(formaDe(txt)); b.textContent = "Copiada: pégasela a quien te da soporte"; }
+      catch(e){ mostrarTexto("forma-de-lo-pegado.txt", formaDe(txt)); }
+    });
+    res.append(b);
+  };
+  if(!t.filas.length){ nota("No hay nada pegado.", true); return; }
+  if(col.u < 0 || col.n < 0){
+    nota("No encuentro en lo pegado una columna con los usuarios de Kitman y otra con los nombres. Comprueba que al copiar se veían las dos.", true);
+    ayudaForma(); return;
+  }
+  /* columnas: se pueden corregir a mano */
+  const ejemplo = c=>{ const f = t.filas.find(x=>esUsuarioK(x[col.u]||"")) || t.filas[0]; return (f[c]||"").slice(0,22); };
+  const elegir = (rotulo, clave, opcional)=>{
+    const d = el("div"); const l = el("label",null,rotulo); d.append(l);
+    const s = el("select");
+    if(opcional){ const o = el("option",null,"No, va todo junto"); o.value = "-1"; s.append(o); }
+    for(let c=0;c<t.n;c++){ const o = el("option",null,"Columna "+(c+1)+" · "+ejemplo(c)); o.value = String(c); s.append(o); }
+    s.value = String(col[clave]);
+    s.addEventListener("change", ()=>{ col[clave] = Number(s.value); lecturaKitman(res, txt, t, col, null, destino); });
+    d.append(s); return d;
+  };
+  const g = el("div","fila-2"); g.style.marginTop = "12px";
+  g.append(elegir("Usuario de Kitman","u"), elegir("Nombre","n"), elegir("¿El nombre de pila va en otra columna?","p",true));
+  res.append(g);
+
+  const vistos = new Set();
+  const filas = t.filas.map(f=>{
+    const usuario = (f[col.u]||"").trim();
+    const base = (f[col.n]||"").trim();
+    const nombre = (col.p >= 0 && f[col.p] ? f[col.p].trim()+" " : "") + base;
+    const valido = esUsuarioK(usuario) && !!nombre && !vistos.has(usuario);
+    if(valido) vistos.add(usuario);
+    return {usuario, nombre, valido, casa: valido && casan(usuario, nombre)};
+  }).filter(x=>x.usuario || x.nombre);
+  if(!marcas) marcas = filas.map(x=>x.valido);
+  const descartadas = filas.filter(x=>!x.valido).length;
+  const dudosas = filas.filter(x=>x.valido && !x.casa).length;
+  const cuenta = nota("");
+  const pintarCuenta = ()=>{ cuenta.textContent = marcas.filter(Boolean).length+" deportistas marcados de "+filas.filter(x=>x.valido).length+". Desmarca a quien no vaya en esta convocatoria."; };
+  pintarCuenta();
+  if(dudosas) nota(dudosas+" con el aviso «revisa»: el usuario no se parece al nombre. Mira que cada usuario vaya con su deportista.", true);
+  if(descartadas) nota(descartadas===1 ? "1 línea no lleva un usuario de Kitman (la cabecera, por ejemplo) y queda fuera."
+                                       : descartadas+" líneas no llevan un usuario de Kitman (la cabecera, por ejemplo) y quedan fuera.");
+  const lista = el("div"); lista.style.marginTop = "8px";
+  filas.forEach((x,i)=>{
+    if(!x.valido) return;
+    const lab = el("label","kfila");
+    const ch = el("input"); ch.type = "checkbox"; ch.checked = !!marcas[i];
+    ch.addEventListener("change", ()=>{ marcas[i] = ch.checked; pintarCuenta(); });
+    const d = el("span"); d.append(el("b",null,x.nombre));
+    const sm = el("small",null,x.usuario + (x.casa ? "" : " · revisa")); if(!x.casa) sm.className = "ojo";
+    d.append(sm); lab.append(ch, d); lista.append(lab);
+  });
+  res.append(lista);
+  const f = el("div","fila"); f.style.marginTop = "12px";
+  const bUsar = el("button","btn","Usar los marcados"); bUsar.type = "button";
+  bUsar.addEventListener("click", ()=>{
+    const elegidos = filas.filter((x,i)=>x.valido && marcas[i]);
+    if(!elegidos.length) return;
+    destino.value = elegidos.map(x=>x.usuario+", "+x.nombre.replace(/[,;\t]+/g," ").replace(/\s+/g," ").trim()).join("\n");
+    res.textContent = "";
+    nota(elegidos.length+" deportistas pasados a la lista de arriba. Ahí puedes añadir o quitar líneas a mano antes de generar el código.");
+  });
+  f.append(bUsar); res.append(f);
 }
 
 /* ---------- vista: ajustes ---------- */

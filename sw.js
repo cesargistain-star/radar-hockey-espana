@@ -1,6 +1,6 @@
 /* Radar · Observación — caché sin conexión de los archivos propios.
    Sube VERSION al publicar una versión nueva: fuerza la recarga en los móviles. */
-const VERSION = "radar-v3";
+const VERSION = "radar-v4";
 const ARCHIVOS = ["./", "./index.html", "./items.json", "./config.js",
                   "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
                   "./fonts/redstick.otf", "./fonts/configblack.ttf", "./fonts/configtext.ttf", "./fonts/crest.png"];

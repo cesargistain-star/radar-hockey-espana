@@ -83,6 +83,15 @@ Al abrir el enlace en el navegador de un móvil, la app muestra un aviso para in
 
 En iPhone la app del icono y Safari guardan sus datos por separado: tras instalar hay que abrirla una vez desde el icono con conexión y cargar ahí la actividad. En esa primera apertura la app confirma cuándo está lista para trabajar sin cobertura.
 
+## Lista de deportistas copiada de Kitman
+
+Kitman no deja exportar la lista de deportistas de un grupo, pero el usuario se ve en pantalla. En **Actividad › Preparar una actividad › Pegar la lista copiada de Kitman** se pega la tabla copiada de la pantalla y la app localiza qué columna es el usuario y cuál el nombre (se pueden corregir a mano), deja desmarcar a quien no vaya en la convocatoria y pasa el resultado a la lista de deportistas.
+
+- Admite tabla con tabuladores, separada por comas o punto y coma, y el caso en que cada casilla queda en una línea.
+- Comprueba que cada usuario se parece a su nombre y marca «revisa» los que no, para detectar filas descolocadas.
+- Todo ocurre en el dispositivo. Si lo pegado no se entiende, el botón «Copiar la forma de lo pegado (sin nombres)» da un texto con la estructura y ninguna letra real, para pedir soporte.
+- Sin probar todavía con una copia real de la pantalla de Kitman.
+
 ## Archivo para Kitman
 
 En **Ajustes › Área de Alto Rendimiento › Preparar archivo para Kitman**. Genera un CSV con el formato del archivo de importación de Kitman: una fila por deportista, primera columna `KUserName` (el usuario de Kitman) y una columna por ítem con el sufijo ` - Import`, separado por comas.
