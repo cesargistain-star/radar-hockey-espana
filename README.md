@@ -77,6 +77,12 @@ Cada envío **añade filas nuevas**, no sobrescribe: el Área de Alto Rendimient
 
 Si no quieres nombres de deportistas en la lista, pon `enviarNombres: false` y solo viajará el ID.
 
+## Categorías
+
+Al preparar una actividad se elige Sub-15, Sub-16, Sub-18 o Sub-21. Los 20 ítems y los cuatro niveles son los mismos en todas. La categoría decide qué referencia por edad («qué se espera en Competente y en Fortaleza») ve el técnico al abrir un ítem.
+
+Hoy solo Sub-15 y Sub-16 tienen referencia, la de la Guía de Observación v5. En Sub-18 y Sub-21 la app lo avisa y muestra las otras dos como orientación. Cuando se valide la referencia de esas categorías, basta añadir `sub18` y `sub21` al campo `cat` de cada ítem en `items.json`: la app las muestra sin tocar el código.
+
 ## Instalación en el móvil
 
 Al abrir el enlace en el navegador de un móvil, la app muestra un aviso para instalarla: en Android, un botón «Instalar»; en iPhone, los pasos de Safari (compartir › Añadir a pantalla de inicio), porque Apple no permite el botón. En el ordenador no aparece.

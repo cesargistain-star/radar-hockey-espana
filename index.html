@@ -555,9 +555,12 @@ function siguienteItem(n, v){
 }
 
 /* ---------- hoja: guía del ítem ---------- */
+/* Categorías del Radar. La referencia por edad («qué se espera») solo existe hoy para Sub-15 y Sub-16:
+   en las demás se muestran los cuatro niveles generales hasta que se valide la suya. */
+const CATEGORIAS = [["sub15","Sub-15"],["sub16","Sub-16"],["sub18","Sub-18"],["sub21","Sub-21"]];
 function abrirHoja(n, nivelActual){
   const it = item(n); const a = act();
-  const cat = a && a.categoria === "sub15" ? "sub15" : "sub16";
+  const cat = a && CATEGORIAS.some(c=>c[0]===a.categoria) ? a.categoria : "sub16";
   const caja = document.getElementById("hoja-caja"); caja.textContent="";
 
   const top = el("div","hoja-top");
@@ -599,12 +602,16 @@ function abrirHoja(n, nivelActual){
 
   if(it.cat){
     caja.append(el("div","g-h","Qué se espera en cada categoría"));
+    if(!it.cat[cat]){
+      const etiqueta = CATEGORIAS.find(c=>c[0]===cat)[1];
+      caja.append(el("p","nota","Para "+etiqueta+" todavía no hay una referencia propia. Guíate por los cuatro niveles del ítem; las de Sub-15 y Sub-16 van solo como orientación."));
+    }
     const tb = el("table","cat");
     const thead = el("thead"); const trh = el("tr");
     trh.append(el("th",null,""), el("th",null,"Competente"), el("th",null,"Fortaleza"));
     thead.append(trh); tb.append(thead);
     const tbody = el("tbody");
-    [["sub15","Sub-15"],["sub16","Sub-16"]].forEach(([k,lab])=>{
+    CATEGORIAS.filter(c=>it.cat[c[0]]).forEach(([k,lab])=>{
       const tr = el("tr", k===cat ? "actual" : null);
       tr.append(el("th",null,lab), el("td",null,it.cat[k].competente), el("td",null,it.cat[k].fortaleza));
       tbody.append(tr);
@@ -686,7 +693,8 @@ function vistaPreparar(app){
   const dcat = el("div");
   const lcat = el("label",null,"Categoría"); lcat.setAttribute("for","c-cat"); dcat.append(lcat);
   const sel = el("select"); sel.id="c-cat";
-  [["sub16","Sub-16"],["sub15","Sub-15"]].forEach(([v,t])=>{ const o=el("option",null,t); o.value=v; sel.append(o); });
+  CATEGORIAS.forEach(([v,t])=>{ const o=el("option",null,t); o.value=v; sel.append(o); });
+  sel.value = "sub16";
   campos.categoria = sel; dcat.append(sel); g.append(dcat); g.append(drol);
   c2.append(g);
   c2.append(el("p","ayuda","Genera un código por rol: el del seleccionador y el de su asistente son distintos, y así cada archivo llega firmado."));
