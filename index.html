@@ -632,6 +632,8 @@ function abrirHoja(n, nivelActual){
    ["La categoría cambia la exigencia, no la conducta: la misma acción puede ser Competente en Sub-15 y A mejorar en Sub-16."],
    ["El nivel compara al deportista con lo que se espera de su categoría, nunca con el resto del grupo. No hay cupos."]
   ].forEach(([t])=>ur.append(el("li",null,t)));
+  /* Sub-18 y Sub-21: no se pondera por posición (decisión del Área de AR, 23/11/2026) */
+  if(cat==="sub18" || cat==="sub21") ur.append(el("li",null,"No se pondera por posición. Si su posición apenas le pide este ítem, déjalo sin situar y explícalo en el comentario del eje: no es un nivel bajo."));
   reglas.append(ur); caja.append(reglas);
 
   document.getElementById("hoja").hidden = false;

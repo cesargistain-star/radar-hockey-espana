@@ -79,9 +79,14 @@ Si no quieres nombres de deportistas en la lista, pon `enviarNombres: false` y s
 
 ## Categorías
 
-Al preparar una actividad se elige Sub-15, Sub-16, Sub-18 o Sub-21. Los 20 ítems y los cuatro niveles son los mismos en todas. La categoría decide qué referencia por edad («qué se espera en Competente y en Fortaleza») ve el técnico al abrir un ítem.
+Al preparar una actividad se elige Sub-15, Sub-16, Sub-18 o Sub-21. Los 20 ítems y los cuatro niveles son los mismos en todas. La categoría decide qué fila de «qué se espera en Competente y en Fortaleza» se resalta al abrir un ítem.
 
-Hoy solo Sub-15 y Sub-16 tienen referencia, la de la Guía de Observación v5. En Sub-18 y Sub-21 la app lo avisa y muestra las otras dos como orientación. Cuando se valide la referencia de esas categorías, basta añadir `sub18` y `sub21` al campo `cat` de cada ítem en `items.json`: la app las muestra sin tocar el código.
+- Sub-15 y Sub-16: referencia de la Guía de Observación v5.
+- Sub-18 y Sub-21: referencia redactada el 23/11/2026 a partir de la Guía v5 y de la matriz por etapas de la Taxonomía Metodológica v2, revisada y dada por validada por el Área de AR. El documento de trabajo, con las reglas de progresión y las decisiones, es «Radar de Desarrollo · Referencias Sub-18 y Sub-21».
+- En Sub-18 y Sub-21 no se pondera por posición: si la posición apenas pide un ítem, se deja sin situar. La app lo recuerda en las reglas de uso de esas categorías.
+- Si falta la referencia de una categoría en `items.json`, la app lo avisa y muestra las demás como orientación.
+
+La Guía de Observación en PDF sigue en la v5 y no recoge todavía Sub-18 y Sub-21.
 
 ## Instalación en el móvil
 
